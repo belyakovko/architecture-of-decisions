@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Архитектура решений — интерактивная карта профессиональных знаний, опыта и идей.">
+  <title>Архитектура решений</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="header"><span class="eyebrow">ЛИЧНАЯ КАРТА ЗНАНИЙ</span><a class="brand" href="./">Архитектура решений<span class="brand-dot">.</span></a></header>
+  <main class="layout">
+    <section class="intro">
+      <p class="eyebrow">ЗНАНИЯ · ОПЫТ · МЫШЛЕНИЕ</p>
+      <h1>За каждым решением — система знаний, опыта и связей.</h1>
+      <p class="lead">Не перечень навыков и должностей, а постоянно развивающаяся карта идей, решений и опыта.</p>
+      <p class="hint">Нажмите на область, чтобы исследовать её. Пока это демонстрационная структура: личные черновики здесь не публикуются.</p>
+    </section>
+    <section class="graph-panel" aria-label="Карта областей знаний">
+      <svg id="graph" viewBox="0 0 800 540" role="img" aria-label="Интерактивный граф профессиональных областей">
+        <g id="edges"></g><g id="nodes"></g>
+      </svg>
+      <div id="detail" class="detail" aria-live="polite"><span class="eyebrow">КАРТА ЗНАНИЙ</span><h2>Выберите область</h2><p>Смысловые связи будут расти вместе с опубликованными материалами.</p></div>
+    </section>
+  </main>
+  <footer>Архитектура решений · Публичная версия <span id="year"></span></footer>
+  <script src="./app.js" defer></script>
+</body>
+</html>
