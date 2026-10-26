@@ -1,63 +1,12 @@
 <!doctype html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#f6f7fb">
-  <meta name="description" content="Архитектура решений — интерактивная карта знаний, опыта и принципов.">
-  <title>Архитектура решений — Карта знаний</title>
-  <link rel="stylesheet" href="./styles.css">
-  <script src="./app.js" defer></script>
-</head>
-<body>
-<div class="app">
-  <aside class="sidebar" id="sidebar">
-    <a class="logo" href="./" aria-label="Архитектура решений — главная"><span class="logo-mark">✳</span><span>архитектура<span class="logo-sub">решений</span></span></a>
-    <div class="workspace-label">ПРОСТРАНСТВО</div>
-    <nav class="nav" aria-label="Разделы">
-      <button class="nav-item active" data-view="graph"><span class="nav-icon">◉</span>Карта знаний</button>
-      <button class="nav-item" data-view="library"><span class="nav-icon">▤</span>Публикации <span class="nav-count">0</span></button>
-      <button class="nav-item" data-view="about"><span class="nav-icon">◇</span>О проекте</button>
-    </nav>
-    <div class="workspace-label topics-head">ОБЛАСТИ ЗНАНИЙ</div>
-    <div id="topic-list" class="topics-list"></div>
-    <div class="sidebar-bottom"><div class="privacy"><span class="privacy-dot"></span> Только открытые материалы</div><p>Личные записи и черновики хранятся отдельно и никогда не загружаются на этот сайт.</p></div>
-  </aside>
-  <div class="main">
-    <header class="topbar">
-      <div class="crumb"><button id="menu-toggle" class="icon-btn mobile-only" aria-label="Открыть меню">☰</button><span class="crumb-root">Архитектура решений</span><span class="crumb-sep">/</span><strong id="view-title">Карта знаний</strong></div>
-      <div class="top-actions"><span class="prototype-pill"><span></span>Прототип</span><button id="theme-toggle" class="icon-btn" title="Переключить тему" aria-label="Переключить тему">☾</button></div>
-    </header>
-    <main class="content">
-      <section id="graph-view" class="view">
-        <div class="heading"><div><div class="section-kicker">МОЯ СИСТЕМА ЗНАНИЙ</div><h1>Карта мышления<span class="period">.</span></h1><p>За каждым решением — система знаний, опыта и связей.</p></div><span class="heading-orbit">✳</span></div>
-        <div class="canvas-card">
-          <div class="canvas-toolbar">
-            <div class="canvas-title"><span class="map-icon">✲</span><div><strong>Области и связи</strong><small>Исследуй карту, выбирая узлы</small></div></div>
-            <div class="canvas-actions"><label class="search-box"><span>⌕</span><input id="search" type="search" placeholder="Найти область..." aria-label="Поиск области"></label><button class="tool-btn" id="reset" title="Сбросить положение">⤢</button></div>
-          </div>
-          <div class="canvas-body" id="canvas-body">
-            <svg id="graph" viewBox="0 0 900 545" role="img" aria-label="Демонстрационная интерактивная карта областей знаний">
-              <defs><pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" class="pattern-dot"/></pattern></defs>
-              <rect x="0" y="0" width="900" height="545" fill="url(#dots)"></rect>
-              <g id="world"><g id="edges"></g><g id="nodes"></g></g>
-            </svg>
-            <div class="graph-chip"><span class="graph-chip-dot"></span>Демонстрационная карта <span class="graph-chip-sep">·</span> 6 областей</div>
-            <div class="zoom-controls"><button id="zoom-in" aria-label="Приблизить">+</button><button id="zoom-out" aria-label="Отдалить">−</button><button id="zoom-reset" aria-label="Сбросить масштаб">⌖</button></div>
-          </div>
-          <div class="canvas-footer"><span><span class="legend-dot"></span>Области знаний</span><span><span class="legend-line"></span>Смысловые связи</span><span class="canvas-footer-right">Двигай карту · Масштабируй · Выбирай узлы</span></div>
-        </div>
-        <div class="lower-grid">
-          <section class="info-card"><span class="info-icon">✦</span><div class="info-kicker">ВЫБРАННАЯ ОБЛАСТЬ</div><h2 id="detail-title">Исследуй связи</h2><p id="detail-text">Нажми на любой круг, чтобы узнать, какое направление мышления он представляет.</p><span id="detail-tag" class="detail-tag">Карта знаний</span></section>
-          <section class="info-card quiet-card"><span class="info-icon">↗</span><div class="info-kicker">СИСТЕМА РАСТЁТ</div><h2>Не резюме. История решений.</h2><p>Каждая опубликованная мысль будет частью единой карты. Крупные области со временем наполнятся записями и новыми связями.</p><span class="detail-tag muted-tag">Осмысленный опыт</span></section>
-        </div>
-      </section>
-      <section id="library-view" class="view hidden"><div class="heading"><div><div class="section-kicker">МАТЕРИАЛЫ</div><h1>Публикации<span class="period">.</span></h1><p>Утверждённые открытые заметки и статьи.</p></div></div><div class="empty-card"><div class="empty-icon">▤</div><h2>Пока нет публичных записей</h2><p>Первая запись утверждена как личный черновик и остаётся в приватном архиве. Здесь появятся только материалы, разрешённые к публикации.</p></div></section>
-      <section id="about-view" class="view hidden"><div class="heading"><div><div class="section-kicker">КОНЦЕПЦИЯ</div><h1>Архитектура решений<span class="period">.</span></h1><p>За каждым решением — система знаний, опыта и связей.</p></div></div><div class="about-card"><h2>Как формируется профессионал?</h2><p>Не только из освоенных компетенций и выполненных проектов. Мышление меняется благодаря опыту, книгам, ошибкам, вопросам и решениям. Это пространство показывает связи между ними.</p><p>Содержимое публичной карты будет расти по мере утверждения и публикации записей. Частный дневник отделён от этого сайта.</p></div></section>
-    </main>
-    <footer class="footer"><span>© <span id="year"></span> Архитектура решений</span><span>Сделано с вниманием к смыслу</span></footer>
-  </div>
-</div>
-<div class="sidebar-backdrop" id="sidebar-backdrop"></div>
-</body>
-</html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Архитектура решений — карта знаний и опыта"><meta name="theme-color" content="#f6f7fb"><title>Архитектура решений</title><link rel="stylesheet" href="./styles.css"><script defer src="./app.js"></script></head>
+<body><div class="app"><aside class="sidebar" id="sidebar"><a class="identity" href="./"><span class="logo">✳</span><span>архитектура<small>решений</small></span></a>
+<div class="group-label">ПРОСТРАНСТВО</div><nav aria-label="Навигация"><button class="nav active" data-view="map">◉ <span>Карта знаний</span></button><button class="nav" data-view="posts">▤ <span>Публикации</span><small>0</small></button><button class="nav" data-view="about">◇ <span>О проекте</span></button></nav>
+<div class="group-label areas-label">ОБЛАСТИ ЗНАНИЙ</div><div id="areas-menu"></div><div class="sidebar-note"><span>● Только публичные материалы</span><p>Личные записи и черновики хранятся в отдельном приватном репозитории.</p></div></aside>
+<div id="scrim"></div><div class="main"><header class="topbar"><div class="breadcrumbs"><button id="menu" aria-label="Открыть меню">☰</button><span class="breadcrumb-root">Архитектура решений</span><b>/</b><strong id="section-name">Карта знаний</strong></div><div class="actions"><span class="status">● Прототип</span><button id="theme" title="Переключить тему" aria-label="Переключить тему">☾</button></div></header>
+<main><section class="page" id="map-page"><div class="heading"><p>МОЯ СИСТЕМА ЗНАНИЙ</p><h1>Карта мышления<span>.</span></h1><div>За каждым решением — система знаний, опыта и связей.</div></div>
+<div class="panel"><div class="panel-header"><div class="panel-title"><span class="panel-icon">✲</span><span><strong>Области и связи</strong><small>Исследуй карту, выбирая узлы</small></span></div><div class="panel-tools"><label class="search">⌕ <input id="search" type="search" placeholder="Найти область..." aria-label="Найти область"></label><button id="reset" aria-label="Сбросить карту">⤢</button></div></div>
+<div class="graph-wrap"><svg id="graph" viewBox="0 0 900 540" role="img" aria-label="Интерактивная карта областей знаний"><defs><pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" class="dot"/></pattern></defs><rect width="900" height="540" fill="url(#dots)"/><g id="world"><g id="edges"></g><g id="nodes"></g></g></svg><div class="map-label">● Демонстрационная карта · 6 областей</div><div class="zoom"><button id="plus" aria-label="Увеличить">+</button><button id="minus" aria-label="Уменьшить">−</button><button id="center" aria-label="Исходный масштаб">⌖</button></div></div><div class="panel-footer"><span>🟣 Области знаний</span><span>— Смысловые связи</span><span>Масштабируй · Выбирай узлы</span></div></div>
+<div class="tiles"><article class="tile"><div class="eyebrow">ВЫБРАННАЯ ОБЛАСТЬ</div><h2 id="area-title">Исследуй связи</h2><p id="area-description">Нажми на круг, чтобы посмотреть описание области знаний.</p><span class="chip" id="area-chip">Карта знаний</span></article><article class="tile"><div class="eyebrow">СИСТЕМА РАСТЁТ</div><h2>Не резюме. История решений.</h2><p>Мысли, знания, принципы и опыт со временем соединятся в единую систему. Здесь будут только утверждённые публичные записи.</p><span class="chip">Осмысленный опыт</span></article></div></section>
+<section class="page hidden" id="posts-page"><div class="heading"><p>ПУБЛИКАЦИИ</p><h1>Материалы<span>.</span></h1><div>Статьи и размышления, открытые для публикации.</div></div><div class="empty"><div class="empty-icon">▤</div><h2>Пока нет публичных записей</h2><p>Первая запись остаётся личным черновиком в приватном репозитории. На сайт она не загружается.</p></div></section>
+<section class="page hidden" id="about-page"><div class="heading"><p>КОНЦЕПЦИЯ</p><h1>Архитектура решений<span>.</span></h1><div>За каждым решением — система знаний, опыта и связей.</div></div><div class="empty"><h2>Как формируется профессионал?</h2><p>Не только из освоенных компетенций, а из опыта, ошибок, вопросов и идей, которые влияют друг на друга. Этот проект показывает развитие мышления через связи.</p></div></section></main><footer>© <span id="year"></span> Архитектура решений <span>Сделано с вниманием к смыслу</span></footer></div></div></body></html>
