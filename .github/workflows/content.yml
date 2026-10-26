@@ -1,0 +1,32 @@
+name: Rebuild public knowledge map
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'entries/**'
+      - 'scripts/build-content.cjs'
+      - '.github/workflows/content.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate manifest from public Markdown
+        run: node scripts/build-content.cjs
+      - name: Commit changed manifest
+        run: |
+          if ! git diff --quiet -- data/content.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/content.json
+            git commit -m "Update published knowledge map data"
+            git push
+          fi
