@@ -75,3 +75,29 @@ if(new Set(projects.map(p=>p.id)).size!==projects.length)throw new Error('Duplic
 projects.sort((a,b)=>b.date.localeCompare(a.date)||a.id.localeCompare(b.id));
 fs.writeFileSync(projectOutput,JSON.stringify({version:1,projects},null,2)+'\n');
 console.log('Published',projects.length,'public projects');
+
+
+// Professional experience is a separate source of truth, distinct from publications and projects.
+const experienceFolder=path.join(__dirname,'..','experience');
+const experienceOutput=path.join(__dirname,'..','data','experience.json');
+const periods=[];
+if(fs.existsSync(experienceFolder)){
+ for(const filename of fs.readdirSync(experienceFolder).filter(f=>f.endsWith('.md')).sort()){
+  const {metadata:m,body}=parse(fs.readFileSync(path.join(experienceFolder,filename),'utf8'));
+  if(m.status!=='published'||m.visibility!=='public')continue;
+  if(!/^[a-z0-9-]+$/.test(String(m.id||'')))throw new Error(filename+': invalid experience ID');
+  if(!m.company||!m.role||!m.period||!m.start)throw new Error(filename+': incomplete period');
+  if(!Array.isArray(m.topics)||!Array.isArray(m.projects||[]))throw new Error(filename+': invalid links');
+  periods.push({
+   id:String(m.id),company:String(m.company),role:String(m.role),period:String(m.period),
+   start:String(m.start),end:String(m.end||''),summary:String(m.summary||''),
+   topics:[...new Set(m.topics.map(String))],
+   projects:[...new Set((m.projects||[]).map(String))].filter(id=>projects.some(p=>p.id===id)),
+   body
+  });
+ }
+}
+if(new Set(periods.map(p=>p.id)).size!==periods.length)throw new Error('Duplicate experience periods');
+periods.sort((a,b)=>b.start.localeCompare(a.start));
+fs.writeFileSync(experienceOutput,JSON.stringify({version:1,periods},null,2)+'\n');
+console.log('Published',periods.length,'public experience periods');
