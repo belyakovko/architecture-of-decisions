@@ -270,3 +270,29 @@ html[data-theme=dark] .neuron-edge.neuron-semantic .neuron-edge-core{stroke:#c3a
 .graph-wrap{overscroll-behavior:contain}
 #graph.dragging,#graph.dragging *{cursor:grabbing!important}
 #graph .node{touch-action:none}
+
+
+/* Project cases are a separate type of evidence, not another blog post. */
+.project-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:17px}
+.project-card,.project-reader{background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:0 9px 28px rgba(54,59,114,.06)}
+.project-card{padding:25px;position:relative;overflow:hidden}
+.project-card:before{content:"";position:absolute;top:-50px;right:-60px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(124,115,238,.14),transparent 70%);pointer-events:none}
+.project-card-meta{display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:800;letter-spacing:.09em;color:var(--muted);font-size:10px}
+.project-stage{letter-spacing:0;font-weight:700;border:1px solid var(--border);background:var(--accentbg);color:var(--accent);border-radius:99px;padding:5px 10px}
+.project-title{display:block;text-align:left;font-size:clamp(19px,2.2vw,24px);letter-spacing:-.035em;line-height:1.25;margin:18px 0 9px;padding:0;background:none;border:0;font-weight:760;color:var(--ink);max-width:35ch}
+.project-title:hover,.project-related-link:hover{color:var(--accent)}
+.project-card>p,.project-lead{font-size:13px;line-height:1.7;color:var(--muted);margin:0 0 16px;max-width:68ch}
+.project-topics{display:flex;flex-wrap:wrap;gap:7px}
+.project-reader{padding:clamp(20px,3.5vw,44px);max-width:930px;margin:0 auto}
+.project-reader h2{font-size:clamp(23px,3vw,35px);letter-spacing:-.04em;line-height:1.2;margin:13px 0}
+.project-role{font-size:13px;font-weight:650;color:var(--ink);border-left:3px solid var(--accent);padding:9px 12px;background:var(--accentbg);border-radius:0 8px 8px 0}
+.project-reader>.article-body{margin-top:28px}
+.project-related{border-top:1px solid var(--border);margin-top:30px;padding-top:14px}
+.project-related h3{font-size:16px;margin:12px 0}
+.project-related-link{display:block;background:none;border:0;padding:8px 0;text-align:left;color:var(--accent);font-weight:650}
+.map-projects{margin:22px 0 0}
+.map-project-heading{font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.13em;margin-bottom:12px}
+.featured-project{border-color:rgba(117,112,229,.22);background:linear-gradient(120deg,var(--surface),var(--accentbg))}
+.preview-project-label{font-size:10px;font-weight:800;letter-spacing:.1em;color:var(--muted);margin:20px 0 8px}
+.preview-project-link{display:block;width:100%;text-align:left;border:1px solid var(--border);background:var(--accentbg);color:var(--accent);border-radius:12px;padding:12px;font-weight:720;line-height:1.4}
+@media(max-width:720px){.project-card{padding:19px}.project-title{font-size:20px}.map-projects{margin-top:16px}}
