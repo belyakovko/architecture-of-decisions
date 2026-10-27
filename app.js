@@ -278,6 +278,13 @@ function projectArticle(project){
   const btn=document.createElement("button");btn.className="project-related-link";btn.textContent=linked.title;btn.onclick=()=>article(linked);related.append(btn);
  });
  const body=document.createElement("div");body.className="article-body";body.append(renderMarkdown(project.body));
+ const period=experiencePeriods.find(p=>p.id===project.experience);
+ if(period){
+  const periodLink=document.createElement("button");periodLink.type="button";periodLink.className="project-related-link";
+  periodLink.textContent="Период работы: "+period.company+" · "+period.period;
+  periodLink.onclick=()=>experienceDetail(period);
+  related.prepend(periodLink);
+ }
  reader.append(back,stage,title,lead,role,chips,body,related);list.append(reader);
  window.scrollTo({top:0,behavior:"smooth"});
 }
