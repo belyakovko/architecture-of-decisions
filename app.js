@@ -1,5 +1,5 @@
 const $=q=>document.querySelector(q),ns="http://www.w3.org/2000/svg",make=(tag,attrs={})=>{const e=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));return e};
-let entries=[],projects=[],areas=[],scale=1,dx=0,dy=0,activeTopic=null,mapMode="all";
+let entries=[],projects=[],experiencePeriods=[],areas=[],scale=1,dx=0,dy=0,activeTopic=null,mapMode="all";
 // Gentle node movement: keep every SVG edge connected to its moving circles.
 const motionNodes=new Map(),motionEdges=[],reducedMotion=window.matchMedia("(prefers-reduced-motion: reduce)");
 function neuronCurve(a,b,index){
@@ -127,7 +127,7 @@ function drawKnowledgeCluster(group,a){
 }
 const gloss=make("radialGradient",{id:"node-gloss",cx:"33%",cy:"12%",r:"88%"});const bright=make("stop",{offset:"0%","stop-color":"white","stop-opacity":".52"});const fade=make("stop",{offset:"56%","stop-color":"white","stop-opacity":".09"});const end=make("stop",{offset:"100%","stop-color":"white","stop-opacity":"0"});gloss.append(bright,fade,end);$("#graph defs").append(gloss);
 function show(section){if(section!=="map"&&document.body.classList.contains("map-fullscreen"))fullState(false);document.querySelectorAll(".page").forEach(e=>e.classList.toggle("hidden",e.id!==section+"-page"));document.querySelectorAll(".nav").forEach(e=>e.classList.toggle("active",e.dataset.view===section));$("#section-name").textContent={map:"Карта знаний",projects:"Проекты",experience:"Опыт",posts:"Публикации",about:"О проекте"}[section];closeMenu()}
-document.querySelectorAll(".nav").forEach(e=>e.onclick=()=>{const reader=$("#post-reader");if(reader)reader.remove();$("#publication-list").classList.remove("hidden");if(e.dataset.view==="projects")renderProjects();show(e.dataset.view)});
+document.querySelectorAll(".nav").forEach(e=>e.onclick=()=>{const reader=$("#post-reader");if(reader)reader.remove();$("#publication-list").classList.remove("hidden");if(e.dataset.view==="projects")renderProjects();if(e.dataset.view==="experience")renderExperience();show(e.dataset.view)});
 
 function renderMarkdown(source){
  const root=document.createElement("div"),lines=String(source||"").replace(/\r\n?/g,"\n").split("\n");
@@ -192,6 +192,41 @@ function projectCard(project,featured=false){
  project.topics.forEach(topic=>{const chip=document.createElement("button");chip.type="button";chip.className="topic-chip";chip.textContent=topic;chip.onclick=()=>filterByTopic(topic);tags.append(chip)});
  card.append(top,title,desc,tags);return card;
 }
+function experienceButton(period,compact=false){
+ const item=document.createElement("article");item.className=compact?"career-item compact":"career-item";
+ const control=document.createElement("button");control.type="button";control.className="career-item-main";
+ const dates=document.createElement("span");dates.className="career-dates";dates.textContent=period.period;
+ const heading=document.createElement("strong");heading.textContent=period.company;
+ const role=document.createElement("span");role.className="career-role";role.textContent=period.role;
+ const summary=document.createElement("span");summary.className="career-summary";summary.textContent=period.summary;
+ control.append(dates,heading,role,summary);control.onclick=()=>experienceDetail(period);
+ item.append(control);return item;
+}
+function renderExperience(){
+ const host=$("#experience-timeline-list");
+ host.replaceChildren();
+ if(!experiencePeriods.length){const p=document.createElement("p");p.textContent="Пока нет опубликованных этапов профессиональной деятельности.";host.append(p);return}
+ experiencePeriods.forEach(period=>host.append(experienceButton(period)));
+}
+function experienceDetail(period){
+ show("experience");
+ const host=$("#experience-timeline-list");
+ host.replaceChildren();
+ const article=document.createElement("article");article.className="career-detail";
+ const back=document.createElement("button");back.className="article-back";back.textContent="← Все этапы";back.onclick=renderExperience;
+ const dates=document.createElement("p");dates.className="career-dates";dates.textContent=period.period;
+ const title=document.createElement("h2");title.textContent=period.role;
+ const company=document.createElement("h3");company.textContent=period.company;
+ const body=document.createElement("div");body.className="article-body";body.append(renderMarkdown(period.body));
+ const links=document.createElement("div");links.className="career-links";
+ (period.projects||[]).forEach(id=>{
+  const project=projects.find(p=>p.id===id);if(!project)return;
+  const button=document.createElement("button");button.className="project-related-link";button.textContent="Проект: "+project.title;button.onclick=()=>projectArticle(project);links.append(button);
+ });
+ article.append(back,dates,title,company,body,links);
+ host.append(article);window.scrollTo({top:0,behavior:"smooth"});
+}
+
 function renderExperienceProjects(){
  const host=$("#experience-projects");
  if(!host)return;
@@ -497,4 +532,8 @@ function theme(v){document.documentElement.dataset.theme=v;$("#theme").textConte
  const projectResponse=await fetch("./data/projects.json",{cache:"no-store"});
  if(projectResponse.ok){const projectData=await projectResponse.json();projects=(projectData.projects||[]).filter(p=>p&&typeof p.id==="string"&&Array.isArray(p.topics)&&typeof p.body==="string");}
  }catch(projectError){console.warn("Не удалось загрузить проекты",projectError)}
- renderProjects();renderExperienceProjects();draw();renderPreview();}catch(error){$("#graph-empty").hidden=false;$("#graph").style.visibility="hidden";$("#graph-empty").querySelector("h2").textContent="Ошибка загрузки карты";$("#graph-empty").querySelector("p").textContent="Проверь файл data/content.json.";console.error(error)}})();
+ try{
+ const expResponse=await fetch("./data/experience.json",{cache:"no-store"});
+ if(expResponse.ok){const expData=await expResponse.json();experiencePeriods=(expData.periods||[]).filter(p=>p&&typeof p.id==="string"&&typeof p.body==="string").sort((a,b)=>b.start.localeCompare(a.start));}
+ }catch(expError){console.warn("Опыт пока не загружен",expError)}
+ renderProjects();renderExperienceProjects();renderExperience();draw();renderPreview();}catch(error){$("#graph-empty").hidden=false;$("#graph").style.visibility="hidden";$("#graph-empty").querySelector("h2").textContent="Ошибка загрузки карты";$("#graph-empty").querySelector("p").textContent="Проверь файл data/content.json.";console.error(error)}})();
