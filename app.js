@@ -62,22 +62,69 @@ function renderFilters(){
  all.textContent="Все направления";all.setAttribute("aria-pressed",String(!activeTopic));all.onclick=()=>filterByTopic(null);host.append(all);
  [...new Set(entries.flatMap(n=>n.topics))].sort((a,b)=>a.localeCompare(b,"ru")).forEach(t=>host.append(topicButton(t,t===activeTopic)));
 }
-function fitNodeLabels(group,a){
- // Line wrapping is based on available circle diameter; exact SVG lengths are measured after insertion.
- const maxWidth=a.r*1.55,words=a.name.trim().split(/\s+/),lines=[];
- let line="";
- for(const word of words){
-  const test=line?line+" "+word:word;
-  if(line&&test.length>Math.max(7,Math.floor(maxWidth/7))){lines.push(line);line=word;}else line=test;
+// Stable organic shapes: one topic is a single uneven field of knowledge, not a sphere.
+function clusterSeed(text){
+ let hash=2166136261;
+ for(let i=0;i<text.length;i++){hash^=text.charCodeAt(i);hash=Math.imul(hash,16777619)}
+ return ()=>{hash+=0x6D2B79F5;let t=Math.imul(hash^(hash>>>15),1|hash);t^=t+Math.imul(t^(t>>>7),61|t);return((t^(t>>>14))>>>0)/4294967296};
+}
+function organicOutline(a,rng){
+ const count=12,points=[];
+ for(let i=0;i<count;i++){
+  const angle=i*Math.PI*2/count;
+  const radius=a.r*(.79+rng()*.35);
+  points.push({x:a.x+Math.cos(angle)*radius,y:a.y+Math.sin(angle)*radius});
  }
+ // Quadratic midpoint spline guarantees rounded joins without a polygonal outline.
+ const mid=(p,q)=>({x:(p.x+q.x)/2,y:(p.y+q.y)/2});
+ let first=mid(points[count-1],points[0]),path="M "+first.x.toFixed(2)+" "+first.y.toFixed(2);
+ for(let i=0;i<count;i++){
+  const next=mid(points[i],points[(i+1)%count]);
+  path+=" Q "+points[i].x.toFixed(2)+" "+points[i].y.toFixed(2)+" "+next.x.toFixed(2)+" "+next.y.toFixed(2);
+ }
+ return path+" Z";
+}
+function drawKnowledgeCluster(group,a){
+ const rng=clusterSeed(a.id),shape=organicOutline(a,rng);
+ group.style.setProperty("--cluster-color",a.color);
+ const haze=make("path",{d:shape,class:"cluster-haze",fill:a.color});
+ const shell=make("path",{d:shape,class:"cluster-shell",fill:a.color});
+ const sheen=make("path",{d:shape,class:"cluster-sheen",fill:"url(#node-gloss)"});
+ group.append(haze,shell,sheen);
+ const particles=[];
+ const count=Math.min(21,6+Math.round(Math.sqrt(a.count)*5));
+ for(let i=0;i<count;i++){
+  const angle=rng()*Math.PI*2;
+  const distance=Math.sqrt(rng())*a.r*.65;
+  const x=a.x+Math.cos(angle)*distance,y=a.y+Math.sin(angle)*distance;
+  particles.push({x,y});
+ }
+ // Fine threads inside each cluster, with a visible luminous center.
+ const threads=make("g",{class:"cluster-threads"});
+ for(let i=0;i<particles.length;i++){
+  const p=particles[i],q=particles[(i+3)%particles.length];
+  threads.append(make("line",{x1:p.x,y1:p.y,x2:q.x,y2:q.y}));
+  if(i%2===0)threads.append(make("line",{x1:a.x,y1:a.y,x2:p.x,y2:p.y}));
+ }
+ group.append(threads);
+ particles.forEach((p,i)=>{
+  group.append(make("circle",{cx:p.x,cy:p.y,r:i%4===0?2.7:1.5,class:"cluster-spark"}));
+ });
+ group.append(make("circle",{cx:a.x,cy:a.y,r:4.1,class:"cluster-heart"}));
+ const words=a.name.split(/\s+/),lines=[],maxChars=15;
+ let line="";
+ for(const word of words){const candidate=line?line+" "+word:word;if(line&&candidate.length>maxChars){lines.push(line);line=word}else line=candidate}
  if(line)lines.push(line);
- const fontSize=Math.max(9,Math.min(13,a.r*.27));
- const lineHeight=fontSize*1.22;
- lines.forEach((str,i)=>{const t=make("text",{x:a.x,y:a.y+(i-(lines.length-1)/2)*lineHeight+fontSize*.34,"font-size":fontSize});t.textContent=str;group.append(t);
-  t.style.fontSize=fontSize+"px";const estimated=str.length*fontSize*.60;if(estimated>maxWidth){t.setAttribute("textLength",maxWidth);t.setAttribute("lengthAdjust","spacingAndGlyphs");}
+ const font=11.5,leading=14,lineCount=lines.length,labelY=a.y+a.r*.84;
+ const width=Math.max(70,Math.min(182,Math.max(...lines.map(s=>s.length))*font*.59+24));
+ const height=lineCount*leading+15;
+ const backing=make("rect",{x:a.x-width/2,y:labelY-height/2,width,height,rx:height/2,class:"cluster-label-bg"});
+ group.append(backing);
+ lines.forEach((word,i)=>{
+  const t=make("text",{x:a.x,y:labelY+(i-(lineCount-1)/2)*leading+4,class:"cluster-label-text"});
+  t.textContent=word;group.append(t);
  });
 }
-
 const gloss=make("radialGradient",{id:"node-gloss",cx:"33%",cy:"12%",r:"88%"});const bright=make("stop",{offset:"0%","stop-color":"white","stop-opacity":".52"});const fade=make("stop",{offset:"56%","stop-color":"white","stop-opacity":".09"});const end=make("stop",{offset:"100%","stop-color":"white","stop-opacity":"0"});gloss.append(bright,fade,end);$("#graph defs").append(gloss);
 function show(section){if(section!=="map"&&document.body.classList.contains("map-fullscreen"))fullState(false);document.querySelectorAll(".page").forEach(e=>e.classList.toggle("hidden",e.id!==section+"-page"));document.querySelectorAll(".nav").forEach(e=>e.classList.toggle("active",e.dataset.view===section));$("#section-name").textContent={map:"Карта знаний",posts:"Публикации",about:"О проекте"}[section];closeMenu()}
 document.querySelectorAll(".nav").forEach(e=>e.onclick=()=>{const reader=$("#post-reader");if(reader)reader.remove();$("#publication-list").classList.remove("hidden");show(e.dataset.view)});
@@ -151,7 +198,7 @@ function draw(){const count=new Map(),rels=new Map();motionNodes.clear();motionE
  group.append(glow,core,synapse,pulse);roots[1].append(group);
  const edge={group,glow,core,synapse,pulse,from:a.id,to:b.id,index};
  motionEdges.push(edge);updateNeuronEdge(edge,a,b,0,false);
-}});areas.forEach(a=>{const g=make("g",{class:"node",tabindex:"0",role:"button","aria-label":a.name});g.dataset.id=a.id;g.append(make("circle",{cx:a.x,cy:a.y,r:a.r+8,fill:a.color,opacity:".13"}),make("circle",{class:"primary",cx:a.x,cy:a.y,r:a.r,fill:a.color}),make("ellipse",{class:"glass-highlight",cx:a.x-a.r*.12,cy:a.y-a.r*.28,rx:a.r*.77,ry:a.r*.64}),make("circle",{class:"glass-rim",cx:a.x,cy:a.y,r:a.r-2}));fitNodeLabels(g,a);g.onclick=()=>select(a.name);g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select(a.name)}};g.addEventListener("pointerenter",()=>{hoveredNode=a.id;highlightNeuronNetwork(a.id)});g.addEventListener("pointerleave",()=>{if(hoveredNode===a.id)hoveredNode=null;highlightNeuronNetwork(null)});g.addEventListener("focus",()=>highlightNeuronNetwork(a.id));g.addEventListener("blur",()=>highlightNeuronNetwork(null));roots[0].append(g);motionNodes.set(a.id,g);const b=document.createElement("button"),swatch=document.createElement("span");b.className="area-menu-item";b.dataset.id=a.id;swatch.className="swatch";swatch.style.background=a.color;b.append(swatch,document.createTextNode(a.name+" ("+a.count+")"));b.onclick=()=>{show("map");select(a.name)};roots[2].append(b)});startMotion()}
+}});areas.forEach(a=>{const g=make("g",{class:"node",tabindex:"0",role:"button","aria-label":a.name});g.dataset.id=a.id;drawKnowledgeCluster(g,a);g.onclick=()=>select(a.name);g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select(a.name)}};g.addEventListener("pointerenter",()=>{hoveredNode=a.id;highlightNeuronNetwork(a.id)});g.addEventListener("pointerleave",()=>{if(hoveredNode===a.id)hoveredNode=null;highlightNeuronNetwork(null)});g.addEventListener("focus",()=>highlightNeuronNetwork(a.id));g.addEventListener("blur",()=>highlightNeuronNetwork(null));roots[0].append(g);motionNodes.set(a.id,g);const b=document.createElement("button"),swatch=document.createElement("span");b.className="area-menu-item";b.dataset.id=a.id;swatch.className="swatch";swatch.style.background=a.color;b.append(swatch,document.createTextNode(a.name+" ("+a.count+")"));b.onclick=()=>{show("map");select(a.name)};roots[2].append(b)});startMotion()}
 function renderPosts(){const list=$("#publication-list");list.replaceChildren();renderFilters();document.querySelector(".nav[data-view=posts] small").textContent=entries.length;
  const matches=activeTopic?entries.filter(n=>n.topics.includes(activeTopic)):entries;
  if(!matches.length){const empty=document.createElement("div");empty.className="empty";empty.textContent=activeTopic?"По выбранному направлению публикаций пока нет.":"Публичных записей пока нет.";list.append(empty)}
