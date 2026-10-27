@@ -68,7 +68,7 @@ if(fs.existsSync(projectFolder)){
   if(!/^[a-zA-Z0-9_-]+$/.test(String(m.id||'')))throw new Error(filename+': invalid project id');
   if(typeof m.title!=='string'||!m.title)throw new Error(filename+': missing project title');
   if(!Array.isArray(m.topics)||!m.topics.length)throw new Error(filename+': missing topics');
-  projects.push({id:String(m.id),title:m.title,date:String(m.date||''),summary:String(m.summary||''),stage:String(m.stage||''),role:String(m.role||''),topics:[...new Set(m.topics.map(String))],links:[...new Set((m.links||[]).map(String))].filter(id=>ids.has(id)),body});
+  projects.push({id:String(m.id),title:m.title,date:String(m.date||''),summary:String(m.summary||''),stage:String(m.stage||''),role:String(m.role||''),experience:String(m.experience||''),topics:[...new Set(m.topics.map(String))],links:[...new Set((m.links||[]).map(String))].filter(id=>ids.has(id)),body});
  }
 }
 if(new Set(projects.map(p=>p.id)).size!==projects.length)throw new Error('Duplicate public project IDs');
