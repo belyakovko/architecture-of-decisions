@@ -189,7 +189,45 @@ function renderPreview(){
 }
 
 function select(name){const a=areas.find(t=>t.name===name);if(!a)return;if(document.body.classList.contains("map-fullscreen"))previewShow(name);$("#area-title").textContent=name;const desc=$("#area-description");desc.replaceChildren();desc.append(document.createTextNode(a.count+" публикаций: "));entries.filter(n=>n.topics.includes(name)).forEach((n,i)=>{if(i)desc.append(document.createTextNode(" · "));const b=document.createElement("button");b.className="inline-link";b.textContent=n.title;b.onclick=()=>article(n);desc.append(b)});$("#area-chip").textContent="Опубликованная область";document.querySelectorAll(".node,.area-menu-item").forEach(e=>e.classList.toggle("active",e.dataset.id===name))}
-function draw(){const count=new Map(),rels=new Map();motionNodes.clear();motionEdges.length=0;hoveredNode=null;entries.forEach(n=>{const topics=[...new Set(n.topics)].sort();topics.forEach(t=>count.set(t,(count.get(t)||0)+1));topics.forEach((a,i)=>topics.slice(i+1).forEach(b=>{const key=JSON.stringify([a,b]);rels.set(key,(rels.get(key)||0)+1)}))});const sorted=[...count].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],"ru")),colors=["#7770e7","#29a69f","#5d90dc","#e99c70","#9075c7","#65ad87","#b675a9"];areas=sorted.map(([name,n],i)=>{const theta=-Math.PI/2+2*Math.PI*i/Math.max(1,sorted.length),ring=sorted.length===1?0:sorted.length<5?170:sorted.length<9?198:216;return{name,id:name,count:n,x:450+Math.cos(theta)*ring,y:270+Math.sin(theta)*ring*.87,r:Math.min(76,30+14*Math.sqrt(n)),color:colors[i%colors.length]}});const lookup=new Map(areas.map(a=>[a.name,a])),roots=["#nodes","#edges","#areas-menu"].map($);roots.forEach(r=>r.replaceChildren());$("#graph-empty").hidden=areas.length>0;$("#graph").style.visibility=areas.length?"visible":"hidden";$(".map-label").textContent="● Публичная карта · "+entries.length+" записей · "+areas.length+" областей";rels.forEach((n,key)=>{const pair=JSON.parse(key),a=lookup.get(pair[0]),b=lookup.get(pair[1]);if(a&&b){
+// Cross-topic bridges are derived from explicit publication links, not guessed topical similarity.
+function semanticTopicBridges(items,direct){
+ const index=new Map(items.map(item=>[String(item.id),item]));
+ const handled=new Set(),bridges=new Map();
+ const words=text=>new Set(text.toLocaleLowerCase("ru").split(/[^а-яёa-z0-9]+/i).filter(w=>w.length>=4));
+ const topicPair=(a,b)=>JSON.stringify([a,b].sort((x,y)=>x.localeCompare(y,"ru")));
+ for(const item of items){
+  for(const linkedId of item.links||[]){
+   const target=index.get(String(linkedId));
+   if(!target||target===item)continue;
+   const records=[String(item.id),String(target.id)].sort(),recordKey=JSON.stringify(records);
+   if(handled.has(recordKey))continue;
+   handled.add(recordKey);
+   // The pair has one documented relation even when both publications link to one another.
+   const pairs=[];
+   for(const a of new Set(item.topics)){
+    for(const b of new Set(target.topics)){
+     if(a===b)continue;
+     const key=topicPair(a,b);
+     if(direct.has(key))continue; // Direct co-occurrence is the stronger existing connection.
+     const common=[...words(a)].filter(word=>words(b).has(word)).length;
+     pairs.push({a,b,key,common});
+    }
+   }
+   if(!pairs.length)continue;
+   // Prefer a meaningful shared term (e.g. Мышление → Системное мышление).
+   // Fall back to one explicitly linked cross-topic bridge rather than flooding the network.
+   pairs.sort((a,b)=>b.common-a.common||a.key.localeCompare(b.key,"ru"));
+   const chosen=pairs[0];
+   const previous=bridges.get(chosen.key)||{count:0,sources:[]};
+   previous.count++;
+   previous.sources.push([item.title,target.title]);
+   bridges.set(chosen.key,previous);
+  }
+ }
+ return bridges;
+}
+
+function draw(){const count=new Map(),rels=new Map();motionNodes.clear();motionEdges.length=0;hoveredNode=null;entries.forEach(n=>{const topics=[...new Set(n.topics)].sort();topics.forEach(t=>count.set(t,(count.get(t)||0)+1));topics.forEach((a,i)=>topics.slice(i+1).forEach(b=>{const key=JSON.stringify([a,b]);rels.set(key,(rels.get(key)||0)+1)}))});const semanticRels=semanticTopicBridges(entries,rels);const sorted=[...count].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],"ru")),colors=["#7770e7","#29a69f","#5d90dc","#e99c70","#9075c7","#65ad87","#b675a9"];areas=sorted.map(([name,n],i)=>{const theta=-Math.PI/2+2*Math.PI*i/Math.max(1,sorted.length),ring=sorted.length===1?0:sorted.length<5?170:sorted.length<9?198:216;return{name,id:name,count:n,x:450+Math.cos(theta)*ring,y:270+Math.sin(theta)*ring*.87,r:Math.min(76,30+14*Math.sqrt(n)),color:colors[i%colors.length]}});const lookup=new Map(areas.map(a=>[a.name,a])),roots=["#nodes","#edges","#areas-menu"].map($);roots.forEach(r=>r.replaceChildren());$("#graph-empty").hidden=areas.length>0;$("#graph").style.visibility=areas.length?"visible":"hidden";$(".map-label").textContent="● Публичная карта · "+entries.length+" записей · "+areas.length+" областей";rels.forEach((n,key)=>{const pair=JSON.parse(key),a=lookup.get(pair[0]),b=lookup.get(pair[1]);if(a&&b){
  const index=motionEdges.length,group=make("g",{class:"neuron-edge"});
  const glow=make("path",{class:"neuron-edge-glow","stroke-width":Math.min(12,7+n*1.4)});
  const core=make("path",{class:"neuron-edge-core","stroke-width":Math.min(3.5,1.25+n*.55)});
@@ -198,7 +236,21 @@ function draw(){const count=new Map(),rels=new Map();motionNodes.clear();motionE
  group.append(glow,core,synapse,pulse);roots[1].append(group);
  const edge={group,glow,core,synapse,pulse,from:a.id,to:b.id,index};
  motionEdges.push(edge);updateNeuronEdge(edge,a,b,0,false);
-}});areas.forEach(a=>{const g=make("g",{class:"node",tabindex:"0",role:"button","aria-label":a.name});g.dataset.id=a.id;drawKnowledgeCluster(g,a);g.onclick=()=>select(a.name);g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select(a.name)}};g.addEventListener("pointerenter",()=>{hoveredNode=a.id;highlightNeuronNetwork(a.id)});g.addEventListener("pointerleave",()=>{if(hoveredNode===a.id)hoveredNode=null;highlightNeuronNetwork(null)});g.addEventListener("focus",()=>highlightNeuronNetwork(a.id));g.addEventListener("blur",()=>highlightNeuronNetwork(null));roots[0].append(g);motionNodes.set(a.id,g);const b=document.createElement("button"),swatch=document.createElement("span");b.className="area-menu-item";b.dataset.id=a.id;swatch.className="swatch";swatch.style.background=a.color;b.append(swatch,document.createTextNode(a.name+" ("+a.count+")"));b.onclick=()=>{show("map");select(a.name)};roots[2].append(b)});startMotion()}
+}});
+ semanticRels.forEach((info,key)=>{
+  const pair=JSON.parse(key),a=lookup.get(pair[0]),b=lookup.get(pair[1]);
+  if(!a||!b)return;
+  const index=motionEdges.length,group=make("g",{class:"neuron-edge neuron-semantic"});
+  const glow=make("path",{class:"neuron-edge-glow","stroke-width":6});
+  const core=make("path",{class:"neuron-edge-core","stroke-width":1.75});
+  const synapse=make("circle",{class:"neuron-synapse",r:2.5});
+  const pulse=make("circle",{class:"neuron-pulse",r:2.4});
+  const title=make("title");title.textContent="Связь через публикации: "+info.sources.map(pair=>pair.join(" ↔ ")).join("; ");
+  group.append(title,glow,core,synapse,pulse);roots[1].append(group);
+  const edge={group,glow,core,synapse,pulse,from:a.id,to:b.id,index};
+  motionEdges.push(edge);updateNeuronEdge(edge,a,b,0,false);
+ });
+ areas.forEach(a=>{const g=make("g",{class:"node",tabindex:"0",role:"button","aria-label":a.name});g.dataset.id=a.id;drawKnowledgeCluster(g,a);g.onclick=()=>select(a.name);g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select(a.name)}};g.addEventListener("pointerenter",()=>{hoveredNode=a.id;highlightNeuronNetwork(a.id)});g.addEventListener("pointerleave",()=>{if(hoveredNode===a.id)hoveredNode=null;highlightNeuronNetwork(null)});g.addEventListener("focus",()=>highlightNeuronNetwork(a.id));g.addEventListener("blur",()=>highlightNeuronNetwork(null));roots[0].append(g);motionNodes.set(a.id,g);const b=document.createElement("button"),swatch=document.createElement("span");b.className="area-menu-item";b.dataset.id=a.id;swatch.className="swatch";swatch.style.background=a.color;b.append(swatch,document.createTextNode(a.name+" ("+a.count+")"));b.onclick=()=>{show("map");select(a.name)};roots[2].append(b)});startMotion()}
 function renderPosts(){const list=$("#publication-list");list.replaceChildren();renderFilters();document.querySelector(".nav[data-view=posts] small").textContent=entries.length;
  const matches=activeTopic?entries.filter(n=>n.topics.includes(activeTopic)):entries;
  if(!matches.length){const empty=document.createElement("div");empty.className="empty";empty.textContent=activeTopic?"По выбранному направлению публикаций пока нет.":"Публичных записей пока нет.";list.append(empty)}
