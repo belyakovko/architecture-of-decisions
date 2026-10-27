@@ -26,7 +26,7 @@ function fitNodeLabels(group,a){
  const fontSize=Math.max(9,Math.min(13,a.r*.27));
  const lineHeight=fontSize*1.22;
  lines.forEach((str,i)=>{const t=make("text",{x:a.x,y:a.y+(i-(lines.length-1)/2)*lineHeight+fontSize*.34,"font-size":fontSize});t.textContent=str;group.append(t);
-  const measured=t.getComputedTextLength();if(measured>maxWidth)t.setAttribute("textLength",maxWidth),t.setAttribute("lengthAdjust","spacingAndGlyphs");
+  t.style.fontSize=fontSize+"px";const estimated=str.length*fontSize*.60;if(estimated>maxWidth){t.setAttribute("textLength",maxWidth);t.setAttribute("lengthAdjust","spacingAndGlyphs");}
  });
 }
 
