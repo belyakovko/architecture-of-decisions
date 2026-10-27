@@ -55,3 +55,23 @@ entries.sort((a,b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id));
 fs.mkdirSync(path.dirname(output), {recursive:true});
 fs.writeFileSync(output, JSON.stringify({version:1, entries}, null, 2) + '\n');
 console.log('Published', entries.length, 'public entries');
+
+
+// Separate public project cases. Projects are never counted as ordinary posts.
+const projectFolder=path.join(__dirname,'..','projects');
+const projectOutput=path.join(__dirname,'..','data','projects.json');
+const projects=[];
+if(fs.existsSync(projectFolder)){
+ for(const filename of fs.readdirSync(projectFolder).filter(f=>f.endsWith('.md')).sort()){
+  const {metadata:m,body}=parse(fs.readFileSync(path.join(projectFolder,filename),'utf8'));
+  if(m.status!=='published'||m.visibility!=='public')continue;
+  if(!/^[a-zA-Z0-9_-]+$/.test(String(m.id||'')))throw new Error(filename+': invalid project id');
+  if(typeof m.title!=='string'||!m.title)throw new Error(filename+': missing project title');
+  if(!Array.isArray(m.topics)||!m.topics.length)throw new Error(filename+': missing topics');
+  projects.push({id:String(m.id),title:m.title,date:String(m.date||''),summary:String(m.summary||''),stage:String(m.stage||''),role:String(m.role||''),topics:[...new Set(m.topics.map(String))],links:[...new Set((m.links||[]).map(String))].filter(id=>ids.has(id)),body});
+ }
+}
+if(new Set(projects.map(p=>p.id)).size!==projects.length)throw new Error('Duplicate public project IDs');
+projects.sort((a,b)=>b.date.localeCompare(a.date)||a.id.localeCompare(b.id));
+fs.writeFileSync(projectOutput,JSON.stringify({version:1,projects},null,2)+'\n');
+console.log('Published',projects.length,'public projects');
