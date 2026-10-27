@@ -196,3 +196,23 @@ body.map-fullscreen #map-preview .topic-chip{margin-bottom:3px}
  body.map-fullscreen #map-preview{height:45dvh}
  body.map-fullscreen .zoom{bottom:calc(45dvh + 16px)!important}
 }
+
+
+/* Neural connections: double-layer curved axons, synapses and traveling impulses. */
+.neuron-edge{pointer-events:none;transition:opacity .28s ease}
+.neuron-edge-glow,.neuron-edge-core{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.neuron-edge-glow{stroke:#8885e5;stroke-opacity:.16;filter:blur(3px)}
+.neuron-edge-core{stroke:#8a91b9;stroke-opacity:.55}
+.neuron-synapse{fill:#b1aaf2;opacity:.49;filter:drop-shadow(0 0 4px rgba(119,114,225,.48))}
+.neuron-pulse{fill:#f9fbff;opacity:0;filter:drop-shadow(0 0 5px rgba(125,115,251,.9)) drop-shadow(0 0 9px rgba(97,164,248,.55))}
+.neuron-edge.neuron-active .neuron-edge-glow{stroke:#8276ef;stroke-opacity:.48}
+.neuron-edge.neuron-active .neuron-edge-core{stroke:#685ce6;stroke-opacity:.88}
+.neuron-edge.neuron-active .neuron-pulse{filter:drop-shadow(0 0 5px #8175ec) drop-shadow(0 0 12px #8275ef)}
+.neuron-edge.neuron-active .neuron-synapse{opacity:.95}
+.neuron-edge.neuron-muted{opacity:.17}
+.node.neuron-dim{opacity:.32}
+.node.neuron-dim:hover{opacity:1}
+html[data-theme=dark] .neuron-edge-core{stroke:#b2b1ec;stroke-opacity:.48}
+html[data-theme=dark] .neuron-edge-glow{stroke:#998dff;stroke-opacity:.21}
+html[data-theme=dark] .neuron-synapse{fill:#d8d0ff}
+@media(prefers-reduced-motion:reduce){.neuron-edge,.node{transition:none}.neuron-pulse{display:none}}
