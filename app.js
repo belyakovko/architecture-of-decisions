@@ -1,5 +1,5 @@
 const $=q=>document.querySelector(q),ns="http://www.w3.org/2000/svg",make=(tag,attrs={})=>{const e=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));return e};
-let entries=[],projects=[],areas=[],scale=1,dx=0,dy=0,activeTopic=null;
+let entries=[],projects=[],areas=[],scale=1,dx=0,dy=0,activeTopic=null,mapMode="all";
 // Gentle node movement: keep every SVG edge connected to its moving circles.
 const motionNodes=new Map(),motionEdges=[],reducedMotion=window.matchMedia("(prefers-reduced-motion: reduce)");
 function neuronCurve(a,b,index){
@@ -337,7 +337,34 @@ function semanticTopicBridges(items,direct){
  return bridges;
 }
 
-function draw(){const count=new Map(),rels=new Map();motionNodes.clear();motionEdges.length=0;hoveredNode=null;entries.forEach(n=>{const topics=[...new Set(n.topics)].sort();topics.forEach(t=>count.set(t,(count.get(t)||0)+1));topics.forEach((a,i)=>topics.slice(i+1).forEach(b=>{const key=JSON.stringify([a,b]);rels.set(key,(rels.get(key)||0)+1)}))});const semanticRels=semanticTopicBridges(entries,rels);const sorted=[...count].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],"ru")),colors=["#7770e7","#29a69f","#5d90dc","#e99c70","#9075c7","#65ad87","#b675a9"];areas=sorted.map(([name,n],i)=>{const theta=-Math.PI/2+2*Math.PI*i/Math.max(1,sorted.length),ring=sorted.length===1?0:sorted.length<5?170:sorted.length<9?198:216;return{name,id:name,count:n,x:450+Math.cos(theta)*ring,y:270+Math.sin(theta)*ring*.87,r:Math.min(76,30+14*Math.sqrt(n)),color:colors[i%colors.length]}});const lookup=new Map(areas.map(a=>[a.name,a])),roots=["#nodes","#edges","#areas-menu"].map($);roots.forEach(r=>r.replaceChildren());$("#graph-empty").hidden=areas.length>0;$("#graph").style.visibility=areas.length?"visible":"hidden";$(".map-label").textContent="● Публичная карта · "+entries.length+" записей · "+areas.length+" областей";rels.forEach((n,key)=>{const pair=JSON.parse(key),a=lookup.get(pair[0]),b=lookup.get(pair[1]);if(a&&b){
+function changeMapMode(mode){
+ if(!["all","knowledge","projects","experience"].includes(mode))return;
+ mapMode=mode;
+ document.querySelectorAll("[data-map-mode]").forEach(button=>{
+  const active=button.dataset.mapMode===mode;
+  button.classList.toggle("active",active);
+  button.setAttribute("aria-pressed",String(active));
+ });
+ reset();draw();renderPreview();
+}
+document.querySelectorAll("[data-map-mode]").forEach(button=>button.addEventListener("click",()=>changeMapMode(button.dataset.mapMode)));
+function draw(){const count=new Map(),rels=new Map();motionNodes.clear();motionEdges.length=0;hoveredNode=null;entries.forEach(n=>{const topics=[...new Set(n.topics)].sort();topics.forEach(t=>count.set(t,(count.get(t)||0)+1));topics.forEach((a,i)=>topics.slice(i+1).forEach(b=>{const key=JSON.stringify([a,b]);rels.set(key,(rels.get(key)||0)+1)}))});const semanticRels=semanticTopicBridges(entries,rels);
+ const showProjects=mapMode==="all"||mapMode==="projects";
+ if(showProjects){
+  projects.forEach(project=>project.topics.forEach(topic=>{
+   if(!count.has(topic))count.set(topic,0);
+  }));
+ }
+ if(mapMode==="projects"){
+  const linked=new Set(projects.flatMap(project=>project.topics));
+  for(const topic of [...count.keys()])if(!linked.has(topic))count.delete(topic);
+ }
+ const sorted=[...count].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],"ru")),colors=["#7770e7","#29a69f","#5d90dc","#e99c70","#9075c7","#65ad87","#b675a9"];areas=sorted.map(([name,n],i)=>{const theta=-Math.PI/2+2*Math.PI*i/Math.max(1,sorted.length),ring=sorted.length===1?0:sorted.length<5?170:sorted.length<9?198:216;return{name,id:name,count:n,x:450+Math.cos(theta)*ring,y:270+Math.sin(theta)*ring*.87,r:Math.min(76,30+14*Math.sqrt(n)),color:colors[i%colors.length]}});const lookup=new Map(areas.map(a=>[a.name,a])),roots=["#nodes","#edges","#areas-menu"].map($);roots.forEach(r=>r.replaceChildren());const experience=mapMode==="experience";
+ $("#map-mode-empty").hidden=!experience;
+ $("#graph-empty").hidden=experience||areas.length>0;
+ $("#graph").style.visibility=experience?"hidden":areas.length?"visible":"hidden";
+ const visibleProjects=showProjects?projects.length:0;
+ $(".map-label").textContent=experience?"● Опыт · материалы готовятся":"● Публичная карта · "+entries.length+" записей · "+areas.length+" областей"+(visibleProjects?" · "+visibleProjects+" проект":"");rels.forEach((n,key)=>{const pair=JSON.parse(key),a=lookup.get(pair[0]),b=lookup.get(pair[1]);if(a&&b){
  const index=motionEdges.length,group=make("g",{class:"neuron-edge"});
  const glow=make("path",{class:"neuron-edge-glow","stroke-width":Math.min(12,7+n*1.4)});
  const core=make("path",{class:"neuron-edge-core","stroke-width":Math.min(3.5,1.25+n*.55)});
@@ -360,7 +387,40 @@ function draw(){const count=new Map(),rels=new Map();motionNodes.clear();motionE
   const edge={group,glow,core,synapse,pulse,from:a.id,to:b.id,index};
   motionEdges.push(edge);updateNeuronEdge(edge,a,b,0,false);
  });
- areas.forEach(a=>{const g=make("g",{class:"node",tabindex:"0",role:"button","aria-label":a.name});g.dataset.id=a.id;drawKnowledgeCluster(g,a);g.onclick=()=>select(a.name);g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select(a.name)}};g.addEventListener("pointerenter",()=>{hoveredNode=a.id;highlightNeuronNetwork(a.id)});g.addEventListener("pointerleave",()=>{if(hoveredNode===a.id)hoveredNode=null;highlightNeuronNetwork(null)});g.addEventListener("focus",()=>highlightNeuronNetwork(a.id));g.addEventListener("blur",()=>highlightNeuronNetwork(null));roots[0].append(g);motionNodes.set(a.id,g);const b=document.createElement("button"),swatch=document.createElement("span");b.className="area-menu-item";b.dataset.id=a.id;swatch.className="swatch";swatch.style.background=a.color;b.append(swatch,document.createTextNode(a.name+" ("+a.count+")"));b.onclick=()=>{show("map");select(a.name)};roots[2].append(b)});startMotion()}
+ areas.forEach(a=>{const g=make("g",{class:"node",tabindex:"0",role:"button","aria-label":a.name});g.dataset.id=a.id;drawKnowledgeCluster(g,a);g.onclick=()=>select(a.name);g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select(a.name)}};g.addEventListener("pointerenter",()=>{hoveredNode=a.id;highlightNeuronNetwork(a.id)});g.addEventListener("pointerleave",()=>{if(hoveredNode===a.id)hoveredNode=null;highlightNeuronNetwork(null)});g.addEventListener("focus",()=>highlightNeuronNetwork(a.id));g.addEventListener("blur",()=>highlightNeuronNetwork(null));roots[0].append(g);motionNodes.set(a.id,g);const b=document.createElement("button"),swatch=document.createElement("span");b.className="area-menu-item";b.dataset.id=a.id;swatch.className="swatch";swatch.style.background=a.color;b.append(swatch,document.createTextNode(a.name+" ("+a.count+")"));b.onclick=()=>{show("map");select(a.name)};roots[2].append(b)});
+ if(showProjects&&!experience){
+  projects.forEach((project,i)=>{
+   // Structured project object, visually distinct from organic topic clusters.
+   const id="project:"+project.id,center={id,x:450+(i%3-1)*125,y:270+Math.floor(i/3)*110,r:48};
+   areas.push(center);
+   const g=make("g",{class:"node project-node",role:"button",tabindex:"0","aria-label":"Проект: "+project.title});
+   g.dataset.id=id;
+   const halo=make("rect",{x:center.x-68,y:center.y-44,width:136,height:88,rx:24,class:"project-node-halo"});
+   const main=make("rect",{x:center.x-62,y:center.y-38,width:124,height:76,rx:20,class:"project-node-body"});
+   const icon=make("text",{x:center.x,y:center.y-8,class:"project-node-icon"});icon.textContent="◈";
+   const label=make("text",{x:center.x,y:center.y+16,class:"project-node-label"});
+   label.textContent=project.id==="lagunaos"?"LagunaOS":project.title.slice(0,15);
+   const small=make("text",{x:center.x,y:center.y+30,class:"project-node-subtitle"});small.textContent="ПРОЕКТ";
+   g.append(halo,main,icon,label,small);
+   g.onclick=()=>projectArticle(project);
+   g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();projectArticle(project)}};
+   g.addEventListener("pointerenter",()=>{hoveredNode=id;highlightNeuronNetwork(id)});
+   g.addEventListener("pointerleave",()=>{hoveredNode=null;highlightNeuronNetwork(null)});
+   roots[0].append(g);motionNodes.set(id,g);
+   project.topics.forEach(topic=>{
+    const a=lookup.get(topic);if(!a)return;
+    const index=motionEdges.length,group=make("g",{class:"neuron-edge project-edge"});
+    const glow=make("path",{class:"neuron-edge-glow","stroke-width":6});
+    const core=make("path",{class:"neuron-edge-core","stroke-width":1.8});
+    const synapse=make("circle",{class:"neuron-synapse",r:2.6});
+    const pulse=make("circle",{class:"neuron-pulse",r:2.6});
+    group.append(glow,core,synapse,pulse);roots[1].append(group);
+    const edge={group,glow,core,synapse,pulse,from:id,to:topic,index};
+    motionEdges.push(edge);updateNeuronEdge(edge,center,a,0,false);
+   });
+  });
+ }
+ startMotion()}
 function renderPosts(){const list=$("#publication-list");list.replaceChildren();renderFilters();document.querySelector(".nav[data-view=posts] small").textContent=entries.length;
  const matches=activeTopic?entries.filter(n=>n.topics.includes(activeTopic)):entries;
  if(!matches.length){const empty=document.createElement("div");empty.className="empty";empty.textContent=activeTopic?"По выбранному направлению публикаций пока нет.":"Публичных записей пока нет.";list.append(empty)}
@@ -418,4 +478,4 @@ function theme(v){document.documentElement.dataset.theme=v;$("#theme").textConte
  const projectResponse=await fetch("./data/projects.json",{cache:"no-store"});
  if(projectResponse.ok){const projectData=await projectResponse.json();projects=(projectData.projects||[]).filter(p=>p&&typeof p.id==="string"&&Array.isArray(p.topics)&&typeof p.body==="string");}
  }catch(projectError){console.warn("Не удалось загрузить проекты",projectError)}
- renderProjects();}catch(error){$("#graph-empty").hidden=false;$("#graph").style.visibility="hidden";$("#graph-empty").querySelector("h2").textContent="Ошибка загрузки карты";$("#graph-empty").querySelector("p").textContent="Проверь файл data/content.json.";console.error(error)}})();
+ renderProjects();draw();renderPreview();}catch(error){$("#graph-empty").hidden=false;$("#graph").style.visibility="hidden";$("#graph-empty").querySelector("h2").textContent="Ошибка загрузки карты";$("#graph-empty").querySelector("p").textContent="Проверь файл data/content.json.";console.error(error)}})();
