@@ -126,7 +126,7 @@ function drawKnowledgeCluster(group,a){
  });
 }
 const gloss=make("radialGradient",{id:"node-gloss",cx:"33%",cy:"12%",r:"88%"});const bright=make("stop",{offset:"0%","stop-color":"white","stop-opacity":".52"});const fade=make("stop",{offset:"56%","stop-color":"white","stop-opacity":".09"});const end=make("stop",{offset:"100%","stop-color":"white","stop-opacity":"0"});gloss.append(bright,fade,end);$("#graph defs").append(gloss);
-function show(section){if(section!=="map"&&document.body.classList.contains("map-fullscreen"))fullState(false);document.querySelectorAll(".page").forEach(e=>e.classList.toggle("hidden",e.id!==section+"-page"));document.querySelectorAll(".nav").forEach(e=>e.classList.toggle("active",e.dataset.view===section));$("#section-name").textContent={map:"Карта знаний",projects:"Проекты",posts:"Публикации",about:"О проекте"}[section];closeMenu()}
+function show(section){if(section!=="map"&&document.body.classList.contains("map-fullscreen"))fullState(false);document.querySelectorAll(".page").forEach(e=>e.classList.toggle("hidden",e.id!==section+"-page"));document.querySelectorAll(".nav").forEach(e=>e.classList.toggle("active",e.dataset.view===section));$("#section-name").textContent={map:"Карта знаний",projects:"Проекты",experience:"Опыт",posts:"Публикации",about:"О проекте"}[section];closeMenu()}
 document.querySelectorAll(".nav").forEach(e=>e.onclick=()=>{const reader=$("#post-reader");if(reader)reader.remove();$("#publication-list").classList.remove("hidden");if(e.dataset.view==="projects")renderProjects();show(e.dataset.view)});
 
 function renderMarkdown(source){
@@ -192,6 +192,25 @@ function projectCard(project,featured=false){
  project.topics.forEach(topic=>{const chip=document.createElement("button");chip.type="button";chip.className="topic-chip";chip.textContent=topic;chip.onclick=()=>filterByTopic(topic);tags.append(chip)});
  card.append(top,title,desc,tags);return card;
 }
+function renderExperienceProjects(){
+ const host=$("#experience-projects");
+ if(!host)return;
+ host.replaceChildren();
+ if(!projects.length){
+  const text=document.createElement("p");text.className="experience-no-projects";
+  text.textContent="Опубликованных проектных кейсов пока нет.";host.append(text);return;
+ }
+ projects.forEach(project=>{
+  const link=document.createElement("button");link.type="button";link.className="experience-project-link";
+  const caption=document.createElement("span");caption.className="experience-project-stage";caption.textContent=project.stage||"Проект";
+  const title=document.createElement("strong");title.textContent=project.title;
+  const summary=document.createElement("span");summary.className="experience-project-summary";summary.textContent=project.summary;
+  link.append(caption,title,summary);
+  link.onclick=()=>projectArticle(project);host.append(link);
+ });
+}
+$("#experience-map-button").onclick=()=>{show("map");changeMapMode("experience")};
+
 function renderProjects(){
  const container=$("#project-list"),featured=$("#map-projects");
  container.replaceChildren();featured.replaceChildren();
@@ -478,4 +497,4 @@ function theme(v){document.documentElement.dataset.theme=v;$("#theme").textConte
  const projectResponse=await fetch("./data/projects.json",{cache:"no-store"});
  if(projectResponse.ok){const projectData=await projectResponse.json();projects=(projectData.projects||[]).filter(p=>p&&typeof p.id==="string"&&Array.isArray(p.topics)&&typeof p.body==="string");}
  }catch(projectError){console.warn("Не удалось загрузить проекты",projectError)}
- renderProjects();draw();renderPreview();}catch(error){$("#graph-empty").hidden=false;$("#graph").style.visibility="hidden";$("#graph-empty").querySelector("h2").textContent="Ошибка загрузки карты";$("#graph-empty").querySelector("p").textContent="Проверь файл data/content.json.";console.error(error)}})();
+ renderProjects();renderExperienceProjects();draw();renderPreview();}catch(error){$("#graph-empty").hidden=false;$("#graph").style.visibility="hidden";$("#graph-empty").querySelector("h2").textContent="Ошибка загрузки карты";$("#graph-empty").querySelector("p").textContent="Проверь файл data/content.json.";console.error(error)}})();
