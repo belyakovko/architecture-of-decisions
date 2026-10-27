@@ -149,8 +149,7 @@ function updateFab(){
  fab.setAttribute("aria-expanded",String(!collapsed));
  fab.setAttribute("aria-label",collapsed?"Показать панель":"Скрыть панель");
  fab.title=collapsed?"Показать панель":"Скрыть панель";
- fab.querySelector(".fab-icon").textContent=collapsed?"❯":"❮";
- fab.querySelector(".fab-text").textContent=collapsed?"Показать панель":"Скрыть панель";
+ fab.querySelector(".fab-icon").textContent=collapsed?"›":"‹";
 }
 const originalSidebarState=sidebarState;
 sidebarState=function(collapsed){originalSidebarState(collapsed);updateFab()};
