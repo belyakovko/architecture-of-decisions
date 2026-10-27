@@ -128,9 +128,60 @@ function drawKnowledgeCluster(group,a){
 const gloss=make("radialGradient",{id:"node-gloss",cx:"33%",cy:"12%",r:"88%"});const bright=make("stop",{offset:"0%","stop-color":"white","stop-opacity":".52"});const fade=make("stop",{offset:"56%","stop-color":"white","stop-opacity":".09"});const end=make("stop",{offset:"100%","stop-color":"white","stop-opacity":"0"});gloss.append(bright,fade,end);$("#graph defs").append(gloss);
 function show(section){if(section!=="map"&&document.body.classList.contains("map-fullscreen"))fullState(false);document.querySelectorAll(".page").forEach(e=>e.classList.toggle("hidden",e.id!==section+"-page"));document.querySelectorAll(".nav").forEach(e=>e.classList.toggle("active",e.dataset.view===section));$("#section-name").textContent={map:"Карта знаний",posts:"Публикации",about:"О проекте"}[section];closeMenu()}
 document.querySelectorAll(".nav").forEach(e=>e.onclick=()=>{const reader=$("#post-reader");if(reader)reader.remove();$("#publication-list").classList.remove("hidden");show(e.dataset.view)});
+
+function renderMarkdown(source){
+ const root=document.createElement("div"),lines=String(source||"").replace(/\r\n?/g,"\n").split("\n");
+ function inline(src,parent){
+  const pattern=/(\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|\*\*([^*\n]+)\*\*|__([^_\n]+)__|~~([^~\n]+)~~|\*([^*\n]+)\*|_([^_\n]+)_)/g;
+  let last=0,match;
+  while((match=pattern.exec(src))){
+   if(match.index>last)parent.append(document.createTextNode(src.slice(last,match.index)));
+   let el;
+   if(match[2]){el=document.createElement("a");el.href=match[3];el.rel="noopener noreferrer";el.target="_blank";el.textContent=match[2];}
+   else if(match[4]||match[5]){el=document.createElement("strong");el.textContent=match[4]||match[5];}
+   else if(match[6]){el=document.createElement("del");el.textContent=match[6];}
+   else{el=document.createElement("em");el.textContent=match[7]||match[8];}
+   parent.append(el);last=pattern.lastIndex;
+  }
+  if(last<src.length)parent.append(document.createTextNode(src.slice(last)));
+ }
+ let i=0;
+ while(i<lines.length){
+  const line=lines[i];
+  if(!line.trim()){i++;continue;}
+  const heading=line.match(/^(#{1,6})\s+(.+)$/);
+  if(heading){const h=document.createElement("h"+heading[1].length);inline(heading[2],h);root.append(h);i++;continue;}
+  if(/^[-*_]\s*[-*_]\s*[-*_]\s*$/.test(line)){root.append(document.createElement("hr"));i++;continue;}
+  if(line.trim().startsWith("~~~")){
+   const code=[];i++;while(i<lines.length&&!lines[i].trim().startsWith("~~~"))code.push(lines[i++]);
+   if(i<lines.length)i++;const pre=document.createElement("pre"),c=document.createElement("code");c.textContent=code.join("\n");pre.append(c);root.append(pre);continue;
+  }
+  if(/^\s*>\s?/.test(line)){
+   const quote=document.createElement("blockquote"),parts=[];
+   while(i<lines.length&&/^\s*>\s?/.test(lines[i]))parts.push(lines[i++].replace(/^\s*>\s?/,""));
+   const p=document.createElement("p");inline(parts.join(" "),p);quote.append(p);root.append(quote);continue;
+  }
+  const bullet=line.match(/^\s*([-+*]|\d+\.)\s+(.+)$/);
+  if(bullet){
+   const ordered=/^\d/.test(bullet[1]),list=document.createElement(ordered?"ol":"ul");
+   while(i<lines.length){
+    const item=lines[i].match(/^\s*([-+*]|\d+\.)\s+(.+)$/);
+    if(!item||/^\d/.test(item[1])!==ordered)break;
+    const li=document.createElement("li");inline(item[2],li);list.append(li);i++;
+   }
+   root.append(list);continue;
+  }
+  const parts=[];
+  while(i<lines.length&&lines[i].trim()&&!/^(#{1,6}\s+|\s*>\s?|\s*([-+*]|\d+\.)\s+)/.test(lines[i]))parts.push(lines[i++].trim());
+  if(!parts.length){i++;continue;}
+  const p=document.createElement("p");inline(parts.join(" "),p);root.append(p);
+ }
+ return root;
+}
+
 function article(n){show("posts");let container=$("#post-reader");if(!container){container=document.createElement("article");container.id="post-reader";container.className="tile article-reader";$("#publication-list").before(container)}container.replaceChildren();const back=document.createElement("button");back.textContent="← К публикациям";back.className="article-back";back.onclick=()=>{container.remove();$("#publication-list").classList.remove("hidden")};const title=document.createElement("h2");title.textContent=n.title;const meta=document.createElement("p");meta.className="article-date";meta.textContent=n.date;
  const tagRow=document.createElement("div");tagRow.className="article-topics";n.topics.forEach(t=>tagRow.append(topicButton(t)));
- const body=document.createElement("div");body.className="article-body";n.body.split(/\r?\n/).forEach(s=>{if(!s.trim())return;const heading=s.match(/^(#{1,4})\s+(.*)/);const line=document.createElement(heading?"h"+Math.min(4,heading[1].length+1):"p");line.textContent=heading?heading[2]:s;body.append(line)});container.append(back,title,meta,tagRow,body);$("#publication-list").classList.add("hidden");container.scrollIntoView({behavior:"smooth",block:"start"})}
+ const body=document.createElement("div");body.className="article-body";body.append(renderMarkdown(n.body));container.append(back,title,meta,tagRow,body);$("#publication-list").classList.add("hidden");container.scrollIntoView({behavior:"smooth",block:"start"})}
 
 // Fullscreen preview keeps readers within the graph instead of opening the publication page.
 let previewTopic=null,previewEntry=null,previewDismissed=false;
@@ -168,11 +219,7 @@ function renderPreview(){
   });
   previewContent.append(tags);
   const body=document.createElement("div");body.className="preview-body";
-  previewEntry.body.split(/\r?\n/).forEach(line=>{
-   if(!line.trim())return;
-   const heading=line.match(/^(#{1,4})\s+(.*)/);
-   body.append(previewText(heading?"h"+Math.min(4,heading[1].length+1):"p",heading?heading[2]:line));
-  });
+  body.append(renderMarkdown(previewEntry.body));
   previewContent.append(body);
   return;
  }
