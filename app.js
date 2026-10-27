@@ -127,7 +127,7 @@ function drawKnowledgeCluster(group,a){
 }
 const gloss=make("radialGradient",{id:"node-gloss",cx:"33%",cy:"12%",r:"88%"});const bright=make("stop",{offset:"0%","stop-color":"white","stop-opacity":".52"});const fade=make("stop",{offset:"56%","stop-color":"white","stop-opacity":".09"});const end=make("stop",{offset:"100%","stop-color":"white","stop-opacity":"0"});gloss.append(bright,fade,end);$("#graph defs").append(gloss);
 function show(section){if(section!=="map"&&document.body.classList.contains("map-fullscreen"))fullState(false);document.querySelectorAll(".page").forEach(e=>e.classList.toggle("hidden",e.id!==section+"-page"));document.querySelectorAll(".nav").forEach(e=>e.classList.toggle("active",e.dataset.view===section));$("#section-name").textContent={map:"Карта знаний",projects:"Проекты",posts:"Публикации",about:"О проекте"}[section];closeMenu()}
-document.querySelectorAll(".nav").forEach(e=>e.onclick=()=>{const reader=$("#post-reader");if(reader)reader.remove();$("#publication-list").classList.remove("hidden");show(e.dataset.view)});
+document.querySelectorAll(".nav").forEach(e=>e.onclick=()=>{const reader=$("#post-reader");if(reader)reader.remove();$("#publication-list").classList.remove("hidden");if(e.dataset.view==="projects")renderProjects();show(e.dataset.view)});
 
 function renderMarkdown(source){
  const root=document.createElement("div"),lines=String(source||"").replace(/\r\n?/g,"\n").split("\n");
