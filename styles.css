@@ -246,3 +246,27 @@ html[data-theme=dark] .node .cluster-label-text{fill:#f5f6ff}
 .neuron-edge.neuron-semantic.neuron-active .neuron-edge-core{stroke:#8263dd;stroke-opacity:.95;stroke-dasharray:5 6}
 .neuron-edge.neuron-semantic.neuron-active .neuron-edge-glow{stroke-opacity:.34}
 html[data-theme=dark] .neuron-edge.neuron-semantic .neuron-edge-core{stroke:#c3a8ff;stroke-opacity:.66}
+
+
+/* Markdown publication typography */
+.article-body :is(h1,h2,h3,h4,h5,h6),.preview-body :is(h1,h2,h3,h4,h5,h6){color:var(--ink);line-height:1.3;letter-spacing:-.025em;margin:1.25em 0 .6em}
+.article-body h1,.preview-body h1{font-size:1.65em}
+.article-body h2,.preview-body h2{font-size:1.4em}
+.article-body :is(h3,h4),.preview-body :is(h3,h4){font-size:1.15em}
+.article-body p,.preview-body p{line-height:1.78;margin:.7em 0 1em;color:var(--ink)}
+.article-body strong,.preview-body strong{font-weight:760;color:var(--ink)}
+.article-body em,.preview-body em{font-style:italic}
+.article-body :is(ul,ol),.preview-body :is(ul,ol){padding-left:1.6em;margin:.7em 0 1.3em}
+.article-body li,.preview-body li{margin:.28em 0;line-height:1.7}
+.article-body li::marker,.preview-body li::marker{color:var(--accent)}
+.article-body blockquote,.preview-body blockquote{margin:1.15em 0;padding:.65em 1em;border-left:3px solid var(--accent);background:var(--accentbg);border-radius:0 10px 10px 0}
+.article-body blockquote p,.preview-body blockquote p{margin:0}
+.article-body a,.preview-body a{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.article-body pre,.preview-body pre{overflow:auto;padding:13px;border-radius:12px;background:var(--bg)}
+.article-body code,.preview-body code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.article-body hr,.preview-body hr{border:0;border-top:1px solid var(--border);margin:1.5em 0}
+/* Panning is an interface gesture; don't let the browser highlight its labels. */
+.graph-wrap,#graph,#graph *{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.graph-wrap{overscroll-behavior:contain}
+#graph.dragging,#graph.dragging *{cursor:grabbing!important}
+#graph .node{touch-action:none}
