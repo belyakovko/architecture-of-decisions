@@ -57,7 +57,64 @@ document.querySelectorAll(".nav").forEach(e=>e.onclick=()=>{const reader=$("#pos
 function article(n){show("posts");let container=$("#post-reader");if(!container){container=document.createElement("article");container.id="post-reader";container.className="tile article-reader";$("#publication-list").before(container)}container.replaceChildren();const back=document.createElement("button");back.textContent="← К публикациям";back.className="article-back";back.onclick=()=>{container.remove();$("#publication-list").classList.remove("hidden")};const title=document.createElement("h2");title.textContent=n.title;const meta=document.createElement("p");meta.className="article-date";meta.textContent=n.date;
  const tagRow=document.createElement("div");tagRow.className="article-topics";n.topics.forEach(t=>tagRow.append(topicButton(t)));
  const body=document.createElement("div");body.className="article-body";n.body.split(/\r?\n/).forEach(s=>{if(!s.trim())return;const heading=s.match(/^(#{1,4})\s+(.*)/);const line=document.createElement(heading?"h"+Math.min(4,heading[1].length+1):"p");line.textContent=heading?heading[2]:s;body.append(line)});container.append(back,title,meta,tagRow,body);$("#publication-list").classList.add("hidden");container.scrollIntoView({behavior:"smooth",block:"start"})}
-function select(name){const a=areas.find(t=>t.name===name);if(!a)return;$("#area-title").textContent=name;const desc=$("#area-description");desc.replaceChildren();desc.append(document.createTextNode(a.count+" публикаций: "));entries.filter(n=>n.topics.includes(name)).forEach((n,i)=>{if(i)desc.append(document.createTextNode(" · "));const b=document.createElement("button");b.className="inline-link";b.textContent=n.title;b.onclick=()=>article(n);desc.append(b)});$("#area-chip").textContent="Опубликованная область";document.querySelectorAll(".node,.area-menu-item").forEach(e=>e.classList.toggle("active",e.dataset.id===name))}
+
+// Fullscreen preview keeps readers within the graph instead of opening the publication page.
+let previewTopic=null,previewEntry=null,previewDismissed=false;
+const preview=$("#map-preview"),previewContent=$("#map-preview-content");
+function previewClear(){
+ previewTopic=null;previewEntry=null;previewDismissed=true;
+ preview.classList.add("is-dismissed");
+}
+$("#map-preview-close").addEventListener("click",previewClear);
+function previewShow(topic){
+ previewTopic=topic;previewEntry=null;previewDismissed=false;
+ preview.classList.remove("is-dismissed");renderPreview();
+}
+function previewRead(entry){
+ previewEntry=entry;previewDismissed=false;
+ preview.classList.remove("is-dismissed");renderPreview();
+}
+function previewText(tag,text,className){
+ const e=document.createElement(tag);e.textContent=text;if(className)e.className=className;return e;
+}
+function renderPreview(){
+ previewContent.replaceChildren();
+ if(!previewTopic && !previewEntry){
+  previewContent.append(previewText("h2","Выберите область"),previewText("p","Нажмите на сферу, чтобы увидеть публикации по выбранному направлению."));
+  return;
+ }
+ if(previewEntry){
+  const back=document.createElement("button");back.type="button";back.className="preview-back";back.textContent="← Публикации по теме";
+  back.addEventListener("click",()=>{previewEntry=null;renderPreview()});
+  previewContent.append(back,previewText("h2",previewEntry.title),previewText("p",previewEntry.date,"preview-date"));
+  const tags=document.createElement("div");tags.className="article-topics";
+  previewEntry.topics.forEach(topic=>{
+   const b=document.createElement("button");b.className="topic-chip";b.type="button";b.textContent=topic;
+   b.addEventListener("click",()=>previewShow(topic));tags.append(b);
+  });
+  previewContent.append(tags);
+  const body=document.createElement("div");body.className="preview-body";
+  previewEntry.body.split(/\r?\n/).forEach(line=>{
+   if(!line.trim())return;
+   const heading=line.match(/^(#{1,4})\s+(.*)/);
+   body.append(previewText(heading?"h"+Math.min(4,heading[1].length+1):"p",heading?heading[2]:line));
+  });
+  previewContent.append(body);
+  return;
+ }
+ const matching=entries.filter(entry=>entry.topics.includes(previewTopic));
+ previewContent.append(previewText("h2",previewTopic),previewText("p",matching.length+" публикаций по направлению","preview-count"));
+ matching.forEach(entry=>{
+  const card=document.createElement("article");card.className="preview-entry";
+  card.append(previewText("small",entry.date));
+  const button=document.createElement("button");button.type="button";button.className="preview-entry-title";button.textContent=entry.title;
+  button.addEventListener("click",()=>previewRead(entry));
+  card.append(button,previewText("p",entry.summary||"Открыть публикацию"));
+  previewContent.append(card);
+ });
+}
+
+function select(name){const a=areas.find(t=>t.name===name);if(!a)return;if(document.body.classList.contains("map-fullscreen"))previewShow(name);$("#area-title").textContent=name;const desc=$("#area-description");desc.replaceChildren();desc.append(document.createTextNode(a.count+" публикаций: "));entries.filter(n=>n.topics.includes(name)).forEach((n,i)=>{if(i)desc.append(document.createTextNode(" · "));const b=document.createElement("button");b.className="inline-link";b.textContent=n.title;b.onclick=()=>article(n);desc.append(b)});$("#area-chip").textContent="Опубликованная область";document.querySelectorAll(".node,.area-menu-item").forEach(e=>e.classList.toggle("active",e.dataset.id===name))}
 function draw(){const count=new Map(),rels=new Map();motionNodes.clear();motionEdges.length=0;entries.forEach(n=>{const topics=[...new Set(n.topics)].sort();topics.forEach(t=>count.set(t,(count.get(t)||0)+1));topics.forEach((a,i)=>topics.slice(i+1).forEach(b=>{const key=JSON.stringify([a,b]);rels.set(key,(rels.get(key)||0)+1)}))});const sorted=[...count].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],"ru")),colors=["#7770e7","#29a69f","#5d90dc","#e99c70","#9075c7","#65ad87","#b675a9"];areas=sorted.map(([name,n],i)=>{const theta=-Math.PI/2+2*Math.PI*i/Math.max(1,sorted.length),ring=sorted.length===1?0:sorted.length<5?170:sorted.length<9?198:216;return{name,id:name,count:n,x:450+Math.cos(theta)*ring,y:270+Math.sin(theta)*ring*.87,r:Math.min(76,30+14*Math.sqrt(n)),color:colors[i%colors.length]}});const lookup=new Map(areas.map(a=>[a.name,a])),roots=["#nodes","#edges","#areas-menu"].map($);roots.forEach(r=>r.replaceChildren());$("#graph-empty").hidden=areas.length>0;$("#graph").style.visibility=areas.length?"visible":"hidden";$(".map-label").textContent="● Публичная карта · "+entries.length+" записей · "+areas.length+" областей";rels.forEach((n,key)=>{const pair=JSON.parse(key),a=lookup.get(pair[0]),b=lookup.get(pair[1]);if(a&&b){const line=make("line",{x1:a.x,y1:a.y,x2:b.x,y2:b.y,"stroke-width":Math.min(5,2+n)});roots[1].append(line);motionEdges.push({line,from:a.id,to:b.id})}});areas.forEach(a=>{const g=make("g",{class:"node",tabindex:"0",role:"button","aria-label":a.name});g.dataset.id=a.id;g.append(make("circle",{cx:a.x,cy:a.y,r:a.r+8,fill:a.color,opacity:".13"}),make("circle",{class:"primary",cx:a.x,cy:a.y,r:a.r,fill:a.color}),make("ellipse",{class:"glass-highlight",cx:a.x-a.r*.12,cy:a.y-a.r*.28,rx:a.r*.77,ry:a.r*.64}),make("circle",{class:"glass-rim",cx:a.x,cy:a.y,r:a.r-2}));fitNodeLabels(g,a);g.onclick=()=>select(a.name);g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select(a.name)}};g.addEventListener("pointerenter",()=>hoveredNode=a.id);g.addEventListener("pointerleave",()=>{if(hoveredNode===a.id)hoveredNode=null});roots[0].append(g);motionNodes.set(a.id,g);const b=document.createElement("button"),swatch=document.createElement("span");b.className="area-menu-item";b.dataset.id=a.id;swatch.className="swatch";swatch.style.background=a.color;b.append(swatch,document.createTextNode(a.name+" ("+a.count+")"));b.onclick=()=>{show("map");select(a.name)};roots[2].append(b)});startMotion()}
 function renderPosts(){const list=$("#publication-list");list.replaceChildren();renderFilters();document.querySelector(".nav[data-view=posts] small").textContent=entries.length;
  const matches=activeTopic?entries.filter(n=>n.topics.includes(activeTopic)):entries;
@@ -102,6 +159,7 @@ updateFab();
 
 const fullscreenButton=$("#fullscreen");
 function fullState(on){
+ if(on){previewDismissed=false;preview.classList.remove("is-dismissed");renderPreview();}
  document.body.classList.toggle("map-fullscreen",on);
  fullscreenButton.setAttribute("aria-pressed",String(on));
  fullscreenButton.setAttribute("aria-label",on?"Свернуть карту":"Развернуть карту на весь экран");
@@ -112,4 +170,4 @@ fullscreenButton.onclick=()=>fullState(!document.body.classList.contains("map-fu
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&document.body.classList.contains("map-fullscreen"))fullState(false)});
 function closeMenu(){side.classList.remove("open");scrim.classList.remove("show")}$("#menu").onclick=()=>{side.classList.add("open");scrim.classList.add("show")};scrim.onclick=closeMenu;
 function theme(v){document.documentElement.dataset.theme=v;$("#theme").textContent=v==="dark"?"☀":"☾";try{localStorage.setItem("architecture-theme",v)}catch(e){}}let mode="light";try{mode=localStorage.getItem("architecture-theme")||"light"}catch(e){}theme(mode);$("#theme").onclick=()=>theme(document.documentElement.dataset.theme==="dark"?"light":"dark");$("#year").textContent=new Date().getFullYear();
-(async()=>{try{const response=await fetch("./data/content.json",{cache:"no-store"});if(!response.ok)throw Error("HTTP "+response.status);const data=await response.json();entries=(data.entries||[]).filter(n=>n&&typeof n.id==="string"&&Array.isArray(n.topics)&&typeof n.body==="string");draw();renderPosts()}catch(error){$("#graph-empty").hidden=false;$("#graph").style.visibility="hidden";$("#graph-empty").querySelector("h2").textContent="Ошибка загрузки карты";$("#graph-empty").querySelector("p").textContent="Проверь файл data/content.json.";console.error(error)}})();
+(async()=>{try{const response=await fetch("./data/content.json",{cache:"no-store"});if(!response.ok)throw Error("HTTP "+response.status);const data=await response.json();entries=(data.entries||[]).filter(n=>n&&typeof n.id==="string"&&Array.isArray(n.topics)&&typeof n.body==="string");draw();renderPosts();renderPreview()}catch(error){$("#graph-empty").hidden=false;$("#graph").style.visibility="hidden";$("#graph-empty").querySelector("h2").textContent="Ошибка загрузки карты";$("#graph-empty").querySelector("p").textContent="Проверь файл data/content.json.";console.error(error)}})();
