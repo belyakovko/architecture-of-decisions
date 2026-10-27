@@ -216,3 +216,24 @@ html[data-theme=dark] .neuron-edge-core{stroke:#b2b1ec;stroke-opacity:.48}
 html[data-theme=dark] .neuron-edge-glow{stroke:#998dff;stroke-opacity:.21}
 html[data-theme=dark] .neuron-synapse{fill:#d8d0ff}
 @media(prefers-reduced-motion:reduce){.neuron-edge,.node{transition:none}.neuron-pulse{display:none}}
+
+
+/* ORGANIC KNOWLEDGE FIELDS · density grows with published entry count */
+.node{filter:drop-shadow(0 8px 16px rgba(70,88,153,.17));transition:opacity .2s ease,filter .25s ease;cursor:pointer}
+.node:hover,.node.active{filter:drop-shadow(0 12px 25px rgba(87,84,171,.27))}
+.node .cluster-haze{opacity:.25;filter:blur(15px);pointer-events:none}
+.node .cluster-shell{fill-opacity:.40;stroke:rgba(255,255,255,.46);stroke-width:1.6;pointer-events:fill}
+.node .cluster-sheen{opacity:.51;pointer-events:none}
+.node .cluster-threads{stroke:rgba(240,252,255,.44);stroke-width:.82;pointer-events:none}
+.node .cluster-spark{fill:#e7ffff;opacity:.85;filter:drop-shadow(0 0 2.5px #ffffff);pointer-events:none}
+.node .cluster-heart{fill:#fff;filter:drop-shadow(0 0 5px var(--cluster-color));pointer-events:none}
+.node .cluster-label-bg{fill:rgba(255,255,255,.71);stroke:rgba(255,255,255,.74);stroke-width:1;pointer-events:none}
+.node .cluster-label-text{fill:#28314d;stroke:none;font-size:11.5px;font-weight:750;paint-order:normal;pointer-events:none}
+.node:hover .cluster-shell,.node.active .cluster-shell{fill-opacity:.56;stroke:rgba(255,255,255,.77)}
+.node:hover .cluster-haze,.node.active .cluster-haze{opacity:.41}
+.node.neuron-dim{opacity:.25}
+html[data-theme=dark] .node .cluster-shell{fill-opacity:.39;stroke:rgba(230,236,255,.30)}
+html[data-theme=dark] .node .cluster-threads{stroke:rgba(227,244,255,.41)}
+html[data-theme=dark] .node .cluster-label-bg{fill:rgba(25,31,52,.76);stroke:rgba(255,255,255,.23)}
+html[data-theme=dark] .node .cluster-label-text{fill:#f5f6ff}
+@media(prefers-reduced-motion:reduce){.node{transition:none}}
