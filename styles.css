@@ -237,3 +237,12 @@ html[data-theme=dark] .node .cluster-threads{stroke:rgba(227,244,255,.41)}
 html[data-theme=dark] .node .cluster-label-bg{fill:rgba(25,31,52,.76);stroke:rgba(255,255,255,.23)}
 html[data-theme=dark] .node .cluster-label-text{fill:#f5f6ff}
 @media(prefers-reduced-motion:reduce){.node{transition:none}}
+
+
+/* Bridges inferred only from explicit publication-to-publication links. */
+.neuron-edge.neuron-semantic .neuron-edge-core{stroke:#9b7fe6;stroke-opacity:.58;stroke-dasharray:5 7;stroke-linecap:round}
+.neuron-edge.neuron-semantic .neuron-edge-glow{stroke:#b38de8;stroke-opacity:.13}
+.neuron-edge.neuron-semantic .neuron-synapse{fill:#b78af4;opacity:.66}
+.neuron-edge.neuron-semantic.neuron-active .neuron-edge-core{stroke:#8263dd;stroke-opacity:.95;stroke-dasharray:5 6}
+.neuron-edge.neuron-semantic.neuron-active .neuron-edge-glow{stroke-opacity:.34}
+html[data-theme=dark] .neuron-edge.neuron-semantic .neuron-edge-core{stroke:#c3a8ff;stroke-opacity:.66}
