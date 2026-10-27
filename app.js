@@ -194,7 +194,7 @@ function semanticTopicBridges(items,direct){
  const index=new Map(items.map(item=>[String(item.id),item]));
  const handled=new Set(),bridges=new Map();
  const words=text=>new Set(text.toLocaleLowerCase("ru").split(/[^а-яёa-z0-9]+/i).filter(w=>w.length>=4));
- const topicPair=(a,b)=>JSON.stringify([a,b].sort((x,y)=>x.localeCompare(y,"ru")));
+ const topicPair=(a,b)=>JSON.stringify([a,b].sort());
  for(const item of items){
   for(const linkedId of item.links||[]){
    const target=index.get(String(linkedId));
