@@ -58,6 +58,8 @@ function sidebarState(collapsed){
  desktopToggle.setAttribute("aria-expanded",String(!collapsed));
  desktopToggle.setAttribute("aria-label",collapsed?"Показать боковую панель":"Скрыть боковую панель");
  desktopToggle.title=collapsed?"Показать панель":"Скрыть панель";
+ desktopToggle.querySelector(".toggle-label").textContent=collapsed?"Показать панель":"Скрыть панель";
+ desktopToggle.querySelector(".toggle-icon").textContent=collapsed?"◨":"◧";
  try{localStorage.setItem("aod-sidebar-collapsed",String(collapsed))}catch(e){}
 }
 let collapsePref=false;try{collapsePref=localStorage.getItem("aod-sidebar-collapsed")==="true"}catch(e){}
