@@ -104,3 +104,31 @@ body.map-fullscreen #map-page .panel .fullscreen-button{background:var(--accentb
  #map-page .graph-wrap #graph{height:clamp(360px,calc(100dvh - 240px),680px)}
 }
 body.map-fullscreen #map-page .graph-wrap #graph{height:100%}
+
+
+/* Always-visible, explicit sidebar handle */
+#panel-fab{
+ position:fixed;left:239px;top:92px;z-index:110;
+ display:flex;align-items:center;gap:9px;
+ min-height:39px;padding:6px 13px;border-radius:0 999px 999px 0;
+ border:1px solid rgba(110,104,212,.28);
+ background:var(--glass-strong);color:var(--accent);
+ font-weight:750;font-size:12px;white-space:nowrap;
+ box-shadow:0 7px 22px rgba(61,61,126,.16),inset 0 1px 0 rgba(255,255,255,.8);
+ -webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);
+ transition:left .24s ease,background .2s;
+}
+#panel-fab:hover{background:var(--accentbg)}
+#panel-fab:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+#panel-fab .fab-icon{font-size:17px;line-height:1}
+body.sidebar-collapsed #panel-fab{left:0;border-radius:0 999px 999px 0}
+body.map-fullscreen #panel-fab{display:none}
+.node .glass-highlight,.node .glass-rim{pointer-events:none}
+.node{will-change:transform}
+.node circle.primary{transition:filter .25s ease,stroke-width .25s ease}
+.node:hover circle.primary{filter:brightness(1.12)}
+.node:hover .glass-highlight{opacity:1}
+.node:focus-visible{outline:none}
+@media(max-width:900px) and (min-width:721px){#panel-fab{left:199px}}
+@media(max-width:720px){#panel-fab{display:none}.node{will-change:auto}}
+@media(prefers-reduced-motion:reduce){#panel-fab{transition:none}.node circle.primary{transition:none}}
