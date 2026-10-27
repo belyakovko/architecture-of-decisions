@@ -414,11 +414,35 @@ function draw(){const count=new Map(),rels=new Map();motionNodes.clear();motionE
   for(const topic of [...count.keys()])if(!linked.has(topic))count.delete(topic);
  }
  const sorted=[...count].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],"ru")),colors=["#7770e7","#29a69f","#5d90dc","#e99c70","#9075c7","#65ad87","#b675a9"];areas=sorted.map(([name,n],i)=>{const theta=-Math.PI/2+2*Math.PI*i/Math.max(1,sorted.length),ring=sorted.length===1?0:sorted.length<5?170:sorted.length<9?198:216;return{name,id:name,count:n,x:450+Math.cos(theta)*ring,y:270+Math.sin(theta)*ring*.87,r:Math.min(76,30+14*Math.sqrt(n)),color:colors[i%colors.length]}});const lookup=new Map(areas.map(a=>[a.name,a])),roots=["#nodes","#edges","#areas-menu"].map($);roots.forEach(r=>r.replaceChildren());const experience=mapMode==="experience";
- $("#map-mode-empty").hidden=!experience;
+ $("#map-mode-empty").hidden=!experience||experiencePeriods.length>0;
  $("#graph-empty").hidden=experience||areas.length>0;
- $("#graph").style.visibility=experience?"hidden":areas.length?"visible":"hidden";
+ $("#graph").style.visibility=experience?(experiencePeriods.length?"visible":"hidden"):areas.length?"visible":"hidden";
+ if(experience){
+  areas=[];const roots=["#nodes","#edges","#areas-menu"].map($);roots.forEach(r=>r.replaceChildren());
+  const count=experiencePeriods.length;
+  experiencePeriods.forEach((period,i)=>{
+   const x=125+i*(650/Math.max(1,count-1)),y=265+(i%2===0?-38:38);
+   const id="career:"+period.id,a={id,x,y,r:44};areas.push(a);
+   const g=make("g",{class:"node career-node",tabindex:"0",role:"button","aria-label":period.company+" — "+period.role});
+   g.dataset.id=id;
+   g.append(make("rect",{class:"career-node-shell",x:x-66,y:y-40,width:132,height:80,rx:22}));
+   const name=make("text",{x,y:y-8,class:"career-node-company"});name.textContent=period.company.length>19?period.company.slice(0,18)+"…":period.company;
+   const dates=make("text",{x,y:y+17,class:"career-node-date"});dates.textContent=period.start+(period.end?" — "+period.end:" — сейчас");
+   g.append(name,dates);g.onclick=()=>experienceDetail(period);
+   g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();experienceDetail(period)}};
+   roots[0].append(g);motionNodes.set(id,g);
+   if(i){
+    const prev=areas[i-1],index=motionEdges.length,group=make("g",{class:"neuron-edge career-edge"});
+    const glow=make("path",{class:"neuron-edge-glow","stroke-width":7}),core=make("path",{class:"neuron-edge-core","stroke-width":2});
+    const synapse=make("circle",{class:"neuron-synapse",r:2.8}),pulse=make("circle",{class:"neuron-pulse",r:2.3});
+    group.append(glow,core,synapse,pulse);roots[1].append(group);
+    const edge={group,glow,core,synapse,pulse,from:prev.id,to:id,index};motionEdges.push(edge);
+    updateNeuronEdge(edge,prev,a,0,false);
+   }
+  });
+ }
  const visibleProjects=showProjects?projects.length:0;
- $(".map-label").textContent=experience?"● Опыт · материалы готовятся":"● Публичная карта · "+entries.length+" записей · "+areas.length+" областей"+(visibleProjects?" · "+visibleProjects+" проект":"");rels.forEach((n,key)=>{const pair=JSON.parse(key),a=lookup.get(pair[0]),b=lookup.get(pair[1]);if(a&&b){
+ $(".map-label").textContent=experience?"● Профессиональный опыт · "+experiencePeriods.length+" этапов":"● Публичная карта · "+entries.length+" записей · "+areas.length+" областей"+(visibleProjects?" · "+visibleProjects+" проект":"");if(!experience)rels.forEach((n,key)=>{const pair=JSON.parse(key),a=lookup.get(pair[0]),b=lookup.get(pair[1]);if(a&&b){
  const index=motionEdges.length,group=make("g",{class:"neuron-edge"});
  const glow=make("path",{class:"neuron-edge-glow","stroke-width":Math.min(12,7+n*1.4)});
  const core=make("path",{class:"neuron-edge-core","stroke-width":Math.min(3.5,1.25+n*.55)});
@@ -428,7 +452,7 @@ function draw(){const count=new Map(),rels=new Map();motionNodes.clear();motionE
  const edge={group,glow,core,synapse,pulse,from:a.id,to:b.id,index};
  motionEdges.push(edge);updateNeuronEdge(edge,a,b,0,false);
 }});
- semanticRels.forEach((info,key)=>{
+ if(!experience)semanticRels.forEach((info,key)=>{
   const pair=JSON.parse(key),a=lookup.get(pair[0]),b=lookup.get(pair[1]);
   if(!a||!b)return;
   const index=motionEdges.length,group=make("g",{class:"neuron-edge neuron-semantic"});
@@ -441,7 +465,7 @@ function draw(){const count=new Map(),rels=new Map();motionNodes.clear();motionE
   const edge={group,glow,core,synapse,pulse,from:a.id,to:b.id,index};
   motionEdges.push(edge);updateNeuronEdge(edge,a,b,0,false);
  });
- areas.forEach(a=>{const g=make("g",{class:"node",tabindex:"0",role:"button","aria-label":a.name});g.dataset.id=a.id;drawKnowledgeCluster(g,a);g.onclick=()=>select(a.name);g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select(a.name)}};g.addEventListener("pointerenter",()=>{hoveredNode=a.id;highlightNeuronNetwork(a.id)});g.addEventListener("pointerleave",()=>{if(hoveredNode===a.id)hoveredNode=null;highlightNeuronNetwork(null)});g.addEventListener("focus",()=>highlightNeuronNetwork(a.id));g.addEventListener("blur",()=>highlightNeuronNetwork(null));roots[0].append(g);motionNodes.set(a.id,g);const b=document.createElement("button"),swatch=document.createElement("span");b.className="area-menu-item";b.dataset.id=a.id;swatch.className="swatch";swatch.style.background=a.color;b.append(swatch,document.createTextNode(a.name+" ("+a.count+")"));b.onclick=()=>{show("map");select(a.name)};roots[2].append(b)});
+ if(!experience)areas.forEach(a=>{const g=make("g",{class:"node",tabindex:"0",role:"button","aria-label":a.name});g.dataset.id=a.id;drawKnowledgeCluster(g,a);g.onclick=()=>select(a.name);g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select(a.name)}};g.addEventListener("pointerenter",()=>{hoveredNode=a.id;highlightNeuronNetwork(a.id)});g.addEventListener("pointerleave",()=>{if(hoveredNode===a.id)hoveredNode=null;highlightNeuronNetwork(null)});g.addEventListener("focus",()=>highlightNeuronNetwork(a.id));g.addEventListener("blur",()=>highlightNeuronNetwork(null));roots[0].append(g);motionNodes.set(a.id,g);const b=document.createElement("button"),swatch=document.createElement("span");b.className="area-menu-item";b.dataset.id=a.id;swatch.className="swatch";swatch.style.background=a.color;b.append(swatch,document.createTextNode(a.name+" ("+a.count+")"));b.onclick=()=>{show("map");select(a.name)};roots[2].append(b)});
  if(showProjects&&!experience){
   projects.forEach((project,i)=>{
    // Structured project object, visually distinct from organic topic clusters.
