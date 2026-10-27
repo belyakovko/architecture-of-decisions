@@ -6,6 +6,7 @@ summary: "Развитие прикладной системы, которая �
 status: published
 visibility: public
 stage: "Развивается"
+experience: laguna-2026
 role: "Постановка задач, аналитическая логика и управление развитием"
 topics:
   - Аналитика
