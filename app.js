@@ -1,5 +1,5 @@
 const $=q=>document.querySelector(q),ns="http://www.w3.org/2000/svg",make=(tag,attrs={})=>{const e=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));return e};
-let entries=[],areas=[],scale=1,dx=0,dy=0,activeTopic=null;
+let entries=[],projects=[],areas=[],scale=1,dx=0,dy=0,activeTopic=null;
 // Gentle node movement: keep every SVG edge connected to its moving circles.
 const motionNodes=new Map(),motionEdges=[],reducedMotion=window.matchMedia("(prefers-reduced-motion: reduce)");
 function neuronCurve(a,b,index){
@@ -126,7 +126,7 @@ function drawKnowledgeCluster(group,a){
  });
 }
 const gloss=make("radialGradient",{id:"node-gloss",cx:"33%",cy:"12%",r:"88%"});const bright=make("stop",{offset:"0%","stop-color":"white","stop-opacity":".52"});const fade=make("stop",{offset:"56%","stop-color":"white","stop-opacity":".09"});const end=make("stop",{offset:"100%","stop-color":"white","stop-opacity":"0"});gloss.append(bright,fade,end);$("#graph defs").append(gloss);
-function show(section){if(section!=="map"&&document.body.classList.contains("map-fullscreen"))fullState(false);document.querySelectorAll(".page").forEach(e=>e.classList.toggle("hidden",e.id!==section+"-page"));document.querySelectorAll(".nav").forEach(e=>e.classList.toggle("active",e.dataset.view===section));$("#section-name").textContent={map:"Карта знаний",posts:"Публикации",about:"О проекте"}[section];closeMenu()}
+function show(section){if(section!=="map"&&document.body.classList.contains("map-fullscreen"))fullState(false);document.querySelectorAll(".page").forEach(e=>e.classList.toggle("hidden",e.id!==section+"-page"));document.querySelectorAll(".nav").forEach(e=>e.classList.toggle("active",e.dataset.view===section));$("#section-name").textContent={map:"Карта знаний",projects:"Проекты",posts:"Публикации",about:"О проекте"}[section];closeMenu()}
 document.querySelectorAll(".nav").forEach(e=>e.onclick=()=>{const reader=$("#post-reader");if(reader)reader.remove();$("#publication-list").classList.remove("hidden");show(e.dataset.view)});
 
 function renderMarkdown(source){
@@ -179,6 +179,55 @@ function renderMarkdown(source){
  return root;
 }
 
+
+function projectCard(project,featured=false){
+ const card=document.createElement("article");card.className=featured?"project-card featured-project":"project-card";
+ const top=document.createElement("div");top.className="project-card-meta";
+ const kind=document.createElement("span");kind.textContent="ПРАКТИЧЕСКИЙ КЕЙС";
+ const stage=document.createElement("span");stage.className="project-stage";stage.textContent=project.stage||"В работе";
+ top.append(kind,stage);
+ const title=document.createElement("button");title.type="button";title.className="project-title";title.textContent=project.title;title.onclick=()=>projectArticle(project);
+ const desc=document.createElement("p");desc.textContent=project.summary;
+ const tags=document.createElement("div");tags.className="project-topics";
+ project.topics.forEach(topic=>{const chip=document.createElement("button");chip.type="button";chip.className="topic-chip";chip.textContent=topic;chip.onclick=()=>filterByTopic(topic);tags.append(chip)});
+ card.append(top,title,desc,tags);return card;
+}
+function renderProjects(){
+ const container=$("#project-list"),featured=$("#map-projects");
+ container.replaceChildren();featured.replaceChildren();
+ $("#project-count").textContent=projects.length;
+ if(!projects.length){
+  const empty=document.createElement("p");empty.className="empty";empty.textContent="Опубликованных проектов пока нет.";
+  container.append(empty);return;
+ }
+ projects.forEach(p=>container.append(projectCard(p)));
+ const heading=document.createElement("div");heading.className="map-project-heading";heading.textContent="ПРАКТИЧЕСКИЙ ОПЫТ";
+ featured.append(heading,projectCard(projects[0],true));
+}
+function projectArticle(project){
+ show("projects");
+ const list=$("#project-list");list.replaceChildren();
+ const reader=document.createElement("article");reader.className="project-reader tile";
+ const back=document.createElement("button");back.className="article-back";back.textContent="← Все проекты";back.onclick=renderProjects;
+ const stage=document.createElement("div");stage.className="project-card-meta";stage.textContent="ПРОЕКТ · "+project.stage;
+ const title=document.createElement("h2");title.textContent=project.title;
+ const lead=document.createElement("p");lead.className="project-lead";lead.textContent=project.summary;
+ const role=document.createElement("p");role.className="project-role";role.textContent="Моя роль: "+project.role;
+ const chips=document.createElement("div");chips.className="project-topics";
+ project.topics.forEach(topic=>chips.append(topicButton(topic)));
+ const related=document.createElement("div");related.className="project-related";
+ const caption=document.createElement("h3");caption.textContent="Связанные идеи";
+ related.append(caption);
+ (project.links||[]).forEach(id=>{
+  const linked=entries.find(e=>e.id===id);
+  if(!linked)return;
+  const btn=document.createElement("button");btn.className="project-related-link";btn.textContent=linked.title;btn.onclick=()=>article(linked);related.append(btn);
+ });
+ const body=document.createElement("div");body.className="article-body";body.append(renderMarkdown(project.body));
+ reader.append(back,stage,title,lead,role,chips,body,related);list.append(reader);
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+
 function article(n){show("posts");let container=$("#post-reader");if(!container){container=document.createElement("article");container.id="post-reader";container.className="tile article-reader";$("#publication-list").before(container)}container.replaceChildren();const back=document.createElement("button");back.textContent="← К публикациям";back.className="article-back";back.onclick=()=>{container.remove();$("#publication-list").classList.remove("hidden")};const title=document.createElement("h2");title.textContent=n.title;const meta=document.createElement("p");meta.className="article-date";meta.textContent=n.date;
  const tagRow=document.createElement("div");tagRow.className="article-topics";n.topics.forEach(t=>tagRow.append(topicButton(t)));
  const body=document.createElement("div");body.className="article-body";body.append(renderMarkdown(n.body));container.append(back,title,meta,tagRow,body);$("#publication-list").classList.add("hidden");container.scrollIntoView({behavior:"smooth",block:"start"})}
@@ -225,6 +274,16 @@ function renderPreview(){
  }
  const matching=entries.filter(entry=>entry.topics.includes(previewTopic));
  previewContent.append(previewText("h2",previewTopic),previewText("p",matching.length+" публикаций по направлению","preview-count"));
+ const linkedProjects=projects.filter(p=>p.topics.includes(previewTopic));
+ if(linkedProjects.length){
+  const projectLabel=document.createElement("div");projectLabel.className="preview-project-label";projectLabel.textContent="СВЯЗАННЫЕ ПРОЕКТЫ";
+  previewContent.append(projectLabel);
+  linkedProjects.forEach(project=>{
+   const button=document.createElement("button");button.type="button";button.className="preview-project-link";button.textContent=project.title;
+   button.onclick=()=>projectArticle(project);previewContent.append(button);
+  });
+ }
+
  matching.forEach(entry=>{
   const card=document.createElement("article");card.className="preview-entry";
   card.append(previewText("small",entry.date));
@@ -235,7 +294,11 @@ function renderPreview(){
  });
 }
 
-function select(name){const a=areas.find(t=>t.name===name);if(!a)return;if(document.body.classList.contains("map-fullscreen"))previewShow(name);$("#area-title").textContent=name;const desc=$("#area-description");desc.replaceChildren();desc.append(document.createTextNode(a.count+" публикаций: "));entries.filter(n=>n.topics.includes(name)).forEach((n,i)=>{if(i)desc.append(document.createTextNode(" · "));const b=document.createElement("button");b.className="inline-link";b.textContent=n.title;b.onclick=()=>article(n);desc.append(b)});$("#area-chip").textContent="Опубликованная область";document.querySelectorAll(".node,.area-menu-item").forEach(e=>e.classList.toggle("active",e.dataset.id===name))}
+function select(name){const a=areas.find(t=>t.name===name);if(!a)return;if(document.body.classList.contains("map-fullscreen"))previewShow(name);$("#area-title").textContent=name;const desc=$("#area-description");desc.replaceChildren();desc.append(document.createTextNode(a.count+" публикаций: "));entries.filter(n=>n.topics.includes(name)).forEach((n,i)=>{if(i)desc.append(document.createTextNode(" · "));const b=document.createElement("button");b.className="inline-link";b.textContent=n.title;b.onclick=()=>article(n);desc.append(b)});const matchedProjects=projects.filter(p=>p.topics.includes(name));
+ if(matchedProjects.length){desc.append(document.createTextNode(" · Проекты: "));
+ matchedProjects.forEach((p,i)=>{if(i)desc.append(document.createTextNode(", "));
+ const button=document.createElement("button");button.className="inline-link";button.textContent=p.title;button.onclick=()=>projectArticle(p);desc.append(button)})}
+ $("#area-chip").textContent="Опубликованная область";document.querySelectorAll(".node,.area-menu-item").forEach(e=>e.classList.toggle("active",e.dataset.id===name))}
 // Cross-topic bridges are derived from explicit publication links, not guessed topical similarity.
 function semanticTopicBridges(items,direct){
  const index=new Map(items.map(item=>[String(item.id),item]));
@@ -351,4 +414,8 @@ fullscreenButton.onclick=()=>fullState(!document.body.classList.contains("map-fu
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&document.body.classList.contains("map-fullscreen"))fullState(false)});
 function closeMenu(){side.classList.remove("open");scrim.classList.remove("show")}$("#menu").onclick=()=>{side.classList.add("open");scrim.classList.add("show")};scrim.onclick=closeMenu;
 function theme(v){document.documentElement.dataset.theme=v;$("#theme").textContent=v==="dark"?"☀":"☾";try{localStorage.setItem("architecture-theme",v)}catch(e){}}let mode="light";try{mode=localStorage.getItem("architecture-theme")||"light"}catch(e){}theme(mode);$("#theme").onclick=()=>theme(document.documentElement.dataset.theme==="dark"?"light":"dark");$("#year").textContent=new Date().getFullYear();
-(async()=>{try{const response=await fetch("./data/content.json",{cache:"no-store"});if(!response.ok)throw Error("HTTP "+response.status);const data=await response.json();entries=(data.entries||[]).filter(n=>n&&typeof n.id==="string"&&Array.isArray(n.topics)&&typeof n.body==="string");draw();renderPosts();renderPreview()}catch(error){$("#graph-empty").hidden=false;$("#graph").style.visibility="hidden";$("#graph-empty").querySelector("h2").textContent="Ошибка загрузки карты";$("#graph-empty").querySelector("p").textContent="Проверь файл data/content.json.";console.error(error)}})();
+(async()=>{try{const response=await fetch("./data/content.json",{cache:"no-store"});if(!response.ok)throw Error("HTTP "+response.status);const data=await response.json();entries=(data.entries||[]).filter(n=>n&&typeof n.id==="string"&&Array.isArray(n.topics)&&typeof n.body==="string");draw();renderPosts();renderPreview();try{
+ const projectResponse=await fetch("./data/projects.json",{cache:"no-store"});
+ if(projectResponse.ok){const projectData=await projectResponse.json();projects=(projectData.projects||[]).filter(p=>p&&typeof p.id==="string"&&Array.isArray(p.topics)&&typeof p.body==="string");}
+ }catch(projectError){console.warn("Не удалось загрузить проекты",projectError)}
+ renderProjects();}catch(error){$("#graph-empty").hidden=false;$("#graph").style.visibility="hidden";$("#graph-empty").querySelector("h2").textContent="Ошибка загрузки карты";$("#graph-empty").querySelector("p").textContent="Проверь файл data/content.json.";console.error(error)}})();
