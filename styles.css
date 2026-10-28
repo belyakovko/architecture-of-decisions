@@ -377,3 +377,25 @@ body.map-fullscreen .map-mode-bar{position:fixed;left:50%;top:11px;transform:tra
 .career-edge .neuron-edge-core{stroke:#8280c9;stroke-width:2;stroke-opacity:.55}
 .career-edge .neuron-edge-glow{stroke:#938fe5;stroke-opacity:.16}
 @media(max-width:720px){.career-item-main{padding:13px}.career-node-company{font-size:11px}}
+
+
+/* Progressive knowledge map: topic regions at rest, evidence on demand. */
+.map-satellite{cursor:pointer;filter:drop-shadow(0 5px 12px rgba(69,74,128,.19))}
+.map-satellite .satellite-halo{fill:rgba(111,98,217,.12);filter:blur(6px);pointer-events:none}
+.map-satellite .satellite-shape{fill:#e9e5ff;stroke:#8175da;stroke-width:1.5;pointer-events:all}
+.map-satellite .satellite-icon{font-size:19px;fill:#6258bb;text-anchor:middle;font-weight:700;pointer-events:none}
+.map-satellite .satellite-label{font-size:10px;fill:var(--ink);stroke:var(--surface);stroke-width:2px;paint-order:stroke;text-anchor:middle;font-weight:700;pointer-events:none}
+.map-satellite.satellite-project .satellite-shape{fill:#dbf3ef;stroke:#3d9d97}
+.map-satellite.satellite-project .satellite-icon{fill:#257e7c}
+.map-satellite.satellite-experience .satellite-shape{fill:#ffebd9;stroke:#d39a71}
+.map-satellite.satellite-experience .satellite-icon{fill:#aa6a44}
+.map-satellite:hover .satellite-shape,.map-satellite:focus-visible .satellite-shape{stroke-width:3}
+.reveal-edge .neuron-edge-core{stroke:#8c81d5;stroke-opacity:.52;stroke-dasharray:3 5;stroke-width:1.5}
+.reveal-edge .neuron-edge-glow{stroke-opacity:.10}
+.reveal-edge.project-link .neuron-edge-core{stroke:#3c9e91}
+.reveal-edge.experience-link .neuron-edge-core{stroke:#dba47d}
+body.map-fullscreen #map-preview .preview-project-label{margin-top:18px}
+html[data-theme=dark] .satellite-label{fill:#f2f0ff;stroke:#191d2c}
+html[data-theme=dark] .satellite-shape{fill:#35315b}
+html[data-theme=dark] .satellite-project .satellite-shape{fill:#244a48}
+html[data-theme=dark] .satellite-experience .satellite-shape{fill:#4d3931}
