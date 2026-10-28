@@ -407,11 +407,12 @@ function semanticTopicBridges(items,direct){
      pairs.push({a,b,key,common});
     }
    }
-   if(!pairs.length)continue;
-   // Prefer a meaningful shared term (e.g. Мышление → Системное мышление).
-   // Fall back to one explicitly linked cross-topic bridge rather than flooding the network.
-   pairs.sort((a,b)=>b.common-a.common||a.key.localeCompare(b.key,"ru"));
-   const chosen=pairs[0];
+   // A publication link is explicit, but its cross-topic interpretation must also be grounded.
+   // Keep only shared topic terms (e.g. Мышление → Системное мышление); never guess a random bridge.
+   const evidenced=pairs.filter(pair=>pair.common>0);
+   if(!evidenced.length)continue;
+   evidenced.sort((a,b)=>b.common-a.common||a.key.localeCompare(b.key,"ru"));
+   const chosen=evidenced[0];
    const previous=bridges.get(chosen.key)||{count:0,sources:[]};
    previous.count++;
    previous.sources.push([item.title,target.title]);
