@@ -315,7 +315,7 @@ function previewText(tag,text,className){
 function renderPreview(){
  previewContent.replaceChildren();
  if(!previewTopic && !previewEntry){
-  previewContent.append(previewText("h2","Выберите область"),previewText("p","Нажмите на сферу, чтобы увидеть публикации по выбранному направлению."));
+  previewContent.append(previewText("h2","Выберите область"),previewText("p","Выберите область знаний, чтобы раскрыть связанные публикации, проекты и профессиональный опыт."));
   return;
  }
  if(previewEntry){
@@ -333,9 +333,9 @@ function renderPreview(){
   previewContent.append(body);
   return;
  }
- const matching=entries.filter(entry=>entry.topics.includes(previewTopic));
- previewContent.append(previewText("h2",previewTopic),previewText("p",matching.length+" публикаций по направлению","preview-count"));
- const linkedProjects=projects.filter(p=>p.topics.includes(previewTopic));
+ const matching=(mapMode==="all"||mapMode==="knowledge")?entries.filter(entry=>entry.topics.includes(previewTopic)):[];
+ previewContent.append(previewText("h2",previewTopic),previewText("p","Выберите связанную запись, проект или период работы.","preview-count"));
+ const linkedProjects=(mapMode==="all"||mapMode==="projects")?projects.filter(p=>p.topics.includes(previewTopic)):[];
  if(linkedProjects.length){
   const projectLabel=document.createElement("div");projectLabel.className="preview-project-label";projectLabel.textContent="СВЯЗАННЫЕ ПРОЕКТЫ";
   previewContent.append(projectLabel);
@@ -345,7 +345,17 @@ function renderPreview(){
   });
  }
 
- matching.forEach(entry=>{
+ const relatedExperience=(mapMode==="all"||mapMode==="experience")?experiencePeriods.filter(p=>p.topics.includes(previewTopic)):[];
+ if(relatedExperience.length){
+  previewContent.append(previewText("div","ПРОФЕССИОНАЛЬНЫЙ ОПЫТ","preview-project-label"));
+  relatedExperience.forEach(period=>{
+   const button=document.createElement("button");button.className="preview-project-link";button.type="button";
+   button.textContent=period.company+" · "+period.role+" ("+period.period+")";
+   button.onclick=()=>experienceDetail(period);previewContent.append(button);
+  });
+ }
+ if(matching.length)previewContent.append(previewText("div","ПУБЛИКАЦИИ И ИДЕИ","preview-project-label"));
+  matching.forEach(entry=>{
   const card=document.createElement("article");card.className="preview-entry";
   card.append(previewText("small",entry.date));
   const button=document.createElement("button");button.type="button";button.className="preview-entry-title";button.textContent=entry.title;
@@ -540,7 +550,7 @@ function renderPosts(){const list=$("#publication-list");list.replaceChildren();
 }
 function transform(){$("#world").setAttribute("transform","translate("+dx+" "+dy+") scale("+scale+")")}
 function zoom(f){scale=Math.max(.55,Math.min(2.5,scale*f));transform()}function reset(){scale=1;dx=dy=0;transform()}
-$("#plus").onclick=()=>zoom(1.2);$("#minus").onclick=()=>zoom(1/1.2);$("#center").onclick=reset;$("#reset").onclick=()=>{reset();$("#search").value="";document.querySelectorAll(".node").forEach(n=>n.classList.remove("dim"))};$("#search").oninput=e=>{const q=e.target.value.trim().toLowerCase();document.querySelectorAll(".node").forEach(n=>n.classList.toggle("dim",!!q&&!n.dataset.id.toLowerCase().includes(q)))};
+$("#plus").onclick=()=>zoom(1.2);$("#minus").onclick=()=>zoom(1/1.2);$("#center").onclick=reset;$("#reset").onclick=()=>{reset();selectedMapTopic=null;previewTopic=null;previewEntry=null;$("#search").value="";draw();renderPreview();document.querySelectorAll(".node").forEach(n=>n.classList.remove("dim"))};$("#search").oninput=e=>{const q=e.target.value.trim().toLowerCase();document.querySelectorAll(".node").forEach(n=>n.classList.toggle("dim",!!q&&!n.dataset.id.toLowerCase().includes(q)))};
 const svg=$("#graph");svg.addEventListener("wheel",e=>{e.preventDefault();zoom(e.deltaY<0?1.08:1/1.08)},{passive:false});let drag=null;svg.onpointerdown=e=>{if(e.button!==0||e.target.closest(".node"))return;e.preventDefault();drag={x:e.clientX,y:e.clientY};svg.classList.add("dragging");svg.setPointerCapture(e.pointerId)};svg.onpointermove=e=>{if(!drag)return;e.preventDefault();const rect=svg.getBoundingClientRect();dx+=(e.clientX-drag.x)*900/rect.width;dy+=(e.clientY-drag.y)*540/rect.height;drag={x:e.clientX,y:e.clientY};transform()};const finishDrag=()=>{drag=null;svg.classList.remove("dragging")};svg.onpointerup=svg.onpointercancel=finishDrag;svg.addEventListener("dragstart",e=>e.preventDefault());
 const side=$("#sidebar"),scrim=$("#scrim");
 const desktopToggle=$("#sidebar-toggle");
