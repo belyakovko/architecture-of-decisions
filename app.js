@@ -1,5 +1,5 @@
 const $=q=>document.querySelector(q),ns="http://www.w3.org/2000/svg",make=(tag,attrs={})=>{const e=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));return e};
-let entries=[],projects=[],experiencePeriods=[],areas=[],scale=1,dx=0,dy=0,activeTopic=null,mapMode="all";
+let entries=[],projects=[],experiencePeriods=[],areas=[],scale=1,dx=0,dy=0,activeTopic=null,mapMode="all",selectedMapTopic=null;
 // Gentle node movement: keep every SVG edge connected to its moving circles.
 const motionNodes=new Map(),motionEdges=[],reducedMotion=window.matchMedia("(prefers-reduced-motion: reduce)");
 function neuronCurve(a,b,index){
@@ -355,11 +355,24 @@ function renderPreview(){
  });
 }
 
-function select(name){const a=areas.find(t=>t.name===name);if(!a)return;if(document.body.classList.contains("map-fullscreen"))previewShow(name);$("#area-title").textContent=name;const desc=$("#area-description");desc.replaceChildren();desc.append(document.createTextNode(a.count+" публикаций: "));entries.filter(n=>n.topics.includes(name)).forEach((n,i)=>{if(i)desc.append(document.createTextNode(" · "));const b=document.createElement("button");b.className="inline-link";b.textContent=n.title;b.onclick=()=>article(n);desc.append(b)});const matchedProjects=projects.filter(p=>p.topics.includes(name));
- if(matchedProjects.length){desc.append(document.createTextNode(" · Проекты: "));
- matchedProjects.forEach((p,i)=>{if(i)desc.append(document.createTextNode(", "));
- const button=document.createElement("button");button.className="inline-link";button.textContent=p.title;button.onclick=()=>projectArticle(p);desc.append(button)})}
- $("#area-chip").textContent="Опубликованная область";document.querySelectorAll(".node,.area-menu-item").forEach(e=>e.classList.toggle("active",e.dataset.id===name))}
+function select(name){
+ if(![...new Set([...entries,...projects,...experiencePeriods].flatMap(item=>item.topics||[]))].includes(name))return;
+ selectedMapTopic=selectedMapTopic===name?null:name;
+ if(selectedMapTopic){
+  const a=selectedMapTopic,items=mapObjectsForTopic(a);
+  $("#area-title").textContent=a;
+  const description=$("#area-description");description.replaceChildren();
+  description.append(document.createTextNode("Связанные материалы: "+items.length+". Выберите объект на карте или в предпросмотре."));
+  $("#area-chip").textContent="Выбранная область";
+  previewShow(a);
+ }else{
+  $("#area-title").textContent="Исследуй связи";
+  $("#area-description").textContent="Выберите область для раскрытия публикаций, проектов и профессионального опыта.";
+  $("#area-chip").textContent="Карта знаний";
+  previewTopic=null;previewEntry=null;renderPreview();preview.classList.add("is-dismissed");
+ }
+ draw();
+}
 // Cross-topic bridges are derived from explicit publication links, not guessed topical similarity.
 function semanticTopicBridges(items,direct){
  const index=new Map(items.map(item=>[String(item.id),item]));
@@ -406,106 +419,116 @@ function changeMapMode(mode){
   button.classList.toggle("active",active);
   button.setAttribute("aria-pressed",String(active));
  });
- reset();draw();renderPreview();
+ reset();selectedMapTopic=null;previewTopic=null;previewEntry=null;draw();renderPreview();
 }
 document.querySelectorAll("[data-map-mode]").forEach(button=>button.addEventListener("click",()=>changeMapMode(button.dataset.mapMode)));
-function draw(){const count=new Map(),rels=new Map();motionNodes.clear();motionEdges.length=0;hoveredNode=null;entries.forEach(n=>{const topics=[...new Set(n.topics)].sort();topics.forEach(t=>count.set(t,(count.get(t)||0)+1));topics.forEach((a,i)=>topics.slice(i+1).forEach(b=>{const key=JSON.stringify([a,b]);rels.set(key,(rels.get(key)||0)+1)}))});const semanticRels=semanticTopicBridges(entries,rels);
- const showProjects=mapMode==="all"||mapMode==="projects";
- if(showProjects){
-  projects.forEach(project=>project.topics.forEach(topic=>{
-   if(!count.has(topic))count.set(topic,0);
+
+function mapObjectsForTopic(topic){
+ const result=[];
+ if(mapMode==="all"||mapMode==="knowledge"){
+  entries.filter(item=>item.topics.includes(topic)).forEach(item=>result.push({id:"entry:"+item.id,type:"publication",title:item.title,source:item,open:()=>{if(document.body.classList.contains("map-fullscreen")){previewShow(topic);previewRead(item)}else article(item)}}));
+ }
+ if(mapMode==="all"||mapMode==="projects"){
+  projects.filter(item=>item.topics.includes(topic)).forEach(item=>result.push({id:"project:"+item.id,type:"project",title:item.title,source:item,open:()=>projectArticle(item)}));
+ }
+ if(mapMode==="all"||mapMode==="experience"){
+  experiencePeriods.filter(item=>item.topics.includes(topic)).forEach(item=>result.push({id:"career:"+item.id,type:"experience",title:item.company+" · "+item.role,source:item,open:()=>experienceDetail(item)}));
+ }
+ return result;
+}
+function edgeBetween(roots,from,to,kind,weight=1){
+ const index=motionEdges.length,group=make("g",{class:"neuron-edge "+kind});
+ const glow=make("path",{class:"neuron-edge-glow","stroke-width":Math.min(12,6+weight)});
+ const core=make("path",{class:"neuron-edge-core","stroke-width":Math.min(3,1.3+weight*.3)});
+ const synapse=make("circle",{class:"neuron-synapse",r:2.4});
+ const pulse=make("circle",{class:"neuron-pulse",r:2.4});
+ group.append(glow,core,synapse,pulse);roots.append(group);
+ const edge={group,glow,core,synapse,pulse,from:from.id,to:to.id,index};
+ motionEdges.push(edge);updateNeuronEdge(edge,from,to,0,false);
+}
+function draw(){
+ motionNodes.clear();motionEdges.length=0;hoveredNode=null;
+ const count=new Map(),rels=new Map();
+ const topicSources=[...entries,...projects,...experiencePeriods];
+ for(const item of topicSources){
+  for(const topic of new Set(item.topics||[]))count.set(topic,(count.get(topic)||0)+1);
+ }
+ for(const item of entries){
+  const topics=[...new Set(item.topics)].sort();
+  topics.forEach((a,i)=>topics.slice(i+1).forEach(b=>{
+   const key=JSON.stringify([a,b]);rels.set(key,(rels.get(key)||0)+1);
   }));
  }
- if(mapMode==="projects"){
-  const linked=new Set(projects.flatMap(project=>project.topics));
-  for(const topic of [...count.keys()])if(!linked.has(topic))count.delete(topic);
- }
- const sorted=[...count].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],"ru")),colors=["#7770e7","#29a69f","#5d90dc","#e99c70","#9075c7","#65ad87","#b675a9"];areas=sorted.map(([name,n],i)=>{const theta=-Math.PI/2+2*Math.PI*i/Math.max(1,sorted.length),ring=sorted.length===1?0:sorted.length<5?170:sorted.length<9?198:216;return{name,id:name,count:n,x:450+Math.cos(theta)*ring,y:270+Math.sin(theta)*ring*.87,r:Math.min(76,30+14*Math.sqrt(n)),color:colors[i%colors.length]}});const lookup=new Map(areas.map(a=>[a.name,a])),roots=["#nodes","#edges","#areas-menu"].map($);roots.forEach(r=>r.replaceChildren());const experience=mapMode==="experience";
- $("#map-mode-empty").hidden=!experience||experiencePeriods.length>0;
- $("#graph-empty").hidden=experience||areas.length>0;
- $("#graph").style.visibility=experience?(experiencePeriods.length?"visible":"hidden"):areas.length?"visible":"hidden";
- if(experience){
-  areas=[];const roots=["#nodes","#edges","#areas-menu"].map($);roots.forEach(r=>r.replaceChildren());
-  const count=experiencePeriods.length;
-  experiencePeriods.forEach((period,i)=>{
-   const x=125+i*(650/Math.max(1,count-1)),y=265+(i%2===0?-38:38);
-   const id="career:"+period.id,a={id,x,y,r:44};areas.push(a);
-   const g=make("g",{class:"node career-node",tabindex:"0",role:"button","aria-label":period.company+" — "+period.role});
-   g.dataset.id=id;
-   g.append(make("rect",{class:"career-node-shell",x:x-66,y:y-40,width:132,height:80,rx:22}));
-   const name=make("text",{x,y:y-8,class:"career-node-company"});name.textContent=period.company.length>19?period.company.slice(0,18)+"…":period.company;
-   const dates=make("text",{x,y:y+17,class:"career-node-date"});dates.textContent=period.start+(period.end?" — "+period.end:" — сейчас");
-   g.append(name,dates);g.onclick=()=>experienceDetail(period);
-   g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();experienceDetail(period)}};
-   roots[0].append(g);motionNodes.set(id,g);
-   if(i){
-    const prev=areas[i-1],index=motionEdges.length,group=make("g",{class:"neuron-edge career-edge"});
-    const glow=make("path",{class:"neuron-edge-glow","stroke-width":7}),core=make("path",{class:"neuron-edge-core","stroke-width":2});
-    const synapse=make("circle",{class:"neuron-synapse",r:2.8}),pulse=make("circle",{class:"neuron-pulse",r:2.3});
-    group.append(glow,core,synapse,pulse);roots[1].append(group);
-    const edge={group,glow,core,synapse,pulse,from:prev.id,to:id,index};motionEdges.push(edge);
-    updateNeuronEdge(edge,prev,a,0,false);
-   }
-  });
- }
- const visibleProjects=showProjects?projects.length:0;
- $(".map-label").textContent=experience?"● Профессиональный опыт · "+experiencePeriods.length+" этапов":"● Публичная карта · "+entries.length+" записей · "+areas.length+" областей"+(visibleProjects?" · "+visibleProjects+" проект":"");if(!experience)rels.forEach((n,key)=>{const pair=JSON.parse(key),a=lookup.get(pair[0]),b=lookup.get(pair[1]);if(a&&b){
- const index=motionEdges.length,group=make("g",{class:"neuron-edge"});
- const glow=make("path",{class:"neuron-edge-glow","stroke-width":Math.min(12,7+n*1.4)});
- const core=make("path",{class:"neuron-edge-core","stroke-width":Math.min(3.5,1.25+n*.55)});
- const synapse=make("circle",{class:"neuron-synapse",r:Math.min(3.6,2+n*.4)});
- const pulse=make("circle",{class:"neuron-pulse",r:2.8});
- group.append(glow,core,synapse,pulse);roots[1].append(group);
- const edge={group,glow,core,synapse,pulse,from:a.id,to:b.id,index};
- motionEdges.push(edge);updateNeuronEdge(edge,a,b,0,false);
-}});
- if(!experience)semanticRels.forEach((info,key)=>{
-  const pair=JSON.parse(key),a=lookup.get(pair[0]),b=lookup.get(pair[1]);
-  if(!a||!b)return;
-  const index=motionEdges.length,group=make("g",{class:"neuron-edge neuron-semantic"});
-  const glow=make("path",{class:"neuron-edge-glow","stroke-width":6});
-  const core=make("path",{class:"neuron-edge-core","stroke-width":1.75});
-  const synapse=make("circle",{class:"neuron-synapse",r:2.5});
-  const pulse=make("circle",{class:"neuron-pulse",r:2.4});
-  const title=make("title");title.textContent="Связь через публикации: "+info.sources.map(pair=>pair.join(" ↔ ")).join("; ");
-  group.append(title,glow,core,synapse,pulse);roots[1].append(group);
-  const edge={group,glow,core,synapse,pulse,from:a.id,to:b.id,index};
-  motionEdges.push(edge);updateNeuronEdge(edge,a,b,0,false);
+ const bridges=semanticTopicBridges(entries,rels);
+ const sorted=[...count].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],"ru"));
+ const colors=["#7770e7","#29a69f","#5d90dc","#e99c70","#9075c7","#65ad87","#b675a9"];
+ const selectedIndex=sorted.findIndex(([name])=>name===selectedMapTopic);
+ const n=sorted.length;
+ areas=sorted.map(([name,volume],i)=>{
+  const theta=-Math.PI/2+i*2*Math.PI/Math.max(1,n),ring=n<=4?166:n<=8?197:212;
+  return {name,id:name,count:volume,x:450+Math.cos(theta)*ring,y:270+Math.sin(theta)*ring*.87,r:Math.min(75,29+13*Math.sqrt(volume)),color:colors[i%colors.length],kind:"topic"};
  });
- if(!experience)areas.forEach(a=>{const g=make("g",{class:"node",tabindex:"0",role:"button","aria-label":a.name});g.dataset.id=a.id;drawKnowledgeCluster(g,a);g.onclick=()=>select(a.name);g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select(a.name)}};g.addEventListener("pointerenter",()=>{hoveredNode=a.id;highlightNeuronNetwork(a.id)});g.addEventListener("pointerleave",()=>{if(hoveredNode===a.id)hoveredNode=null;highlightNeuronNetwork(null)});g.addEventListener("focus",()=>highlightNeuronNetwork(a.id));g.addEventListener("blur",()=>highlightNeuronNetwork(null));roots[0].append(g);motionNodes.set(a.id,g);const b=document.createElement("button"),swatch=document.createElement("span");b.className="area-menu-item";b.dataset.id=a.id;swatch.className="swatch";swatch.style.background=a.color;b.append(swatch,document.createTextNode(a.name+" ("+a.count+")"));b.onclick=()=>{show("map");select(a.name)};roots[2].append(b)});
- if(showProjects&&!experience){
-  projects.forEach((project,i)=>{
-   // Structured project object, visually distinct from organic topic clusters.
-   const id="project:"+project.id,center={id,x:450+(i%3-1)*125,y:270+Math.floor(i/3)*110,r:48};
-   areas.push(center);
-   const g=make("g",{class:"node project-node",role:"button",tabindex:"0","aria-label":"Проект: "+project.title});
-   g.dataset.id=id;
-   const halo=make("rect",{x:center.x-68,y:center.y-44,width:136,height:88,rx:24,class:"project-node-halo"});
-   const main=make("rect",{x:center.x-62,y:center.y-38,width:124,height:76,rx:20,class:"project-node-body"});
-   const icon=make("text",{x:center.x,y:center.y-8,class:"project-node-icon"});icon.textContent="◈";
-   const label=make("text",{x:center.x,y:center.y+16,class:"project-node-label"});
-   label.textContent=project.id==="lagunaos"?"LagunaOS":project.title.slice(0,15);
-   const small=make("text",{x:center.x,y:center.y+30,class:"project-node-subtitle"});small.textContent="ПРОЕКТ";
-   g.append(halo,main,icon,label,small);
-   g.onclick=()=>projectArticle(project);
-   g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();projectArticle(project)}};
-   g.addEventListener("pointerenter",()=>{hoveredNode=id;highlightNeuronNetwork(id)});
-   g.addEventListener("pointerleave",()=>{hoveredNode=null;highlightNeuronNetwork(null)});
-   roots[0].append(g);motionNodes.set(id,g);
-   project.topics.forEach(topic=>{
-    const a=lookup.get(topic);if(!a)return;
-    const index=motionEdges.length,group=make("g",{class:"neuron-edge project-edge"});
-    const glow=make("path",{class:"neuron-edge-glow","stroke-width":6});
-    const core=make("path",{class:"neuron-edge-core","stroke-width":1.8});
-    const synapse=make("circle",{class:"neuron-synapse",r:2.6});
-    const pulse=make("circle",{class:"neuron-pulse",r:2.6});
-    group.append(glow,core,synapse,pulse);roots[1].append(group);
-    const edge={group,glow,core,synapse,pulse,from:id,to:topic,index};
-    motionEdges.push(edge);updateNeuronEdge(edge,center,a,0,false);
-   });
+ const lookup=new Map(areas.map(a=>[a.id,a]));
+ const nodes=$("#nodes"),edges=$("#edges"),menu=$("#areas-menu");
+ nodes.replaceChildren();edges.replaceChildren();menu.replaceChildren();
+ $("#map-mode-empty").hidden=true;
+ $("#graph-empty").hidden=areas.length>0;
+ $("#graph").style.visibility=areas.length?"visible":"hidden";
+ $(".map-label").textContent="● Карта знаний · "+entries.length+" публикации · "+projects.length+" проекты · "+experiencePeriods.length+" этапов опыта";
+ rels.forEach((weight,key)=>{
+  const [left,right]=JSON.parse(key),a=lookup.get(left),b=lookup.get(right);
+  if(a&&b)edgeBetween(edges,a,b,"",weight);
+ });
+ bridges.forEach((value,key)=>{
+  const [left,right]=JSON.parse(key),a=lookup.get(left),b=lookup.get(right);
+  if(a&&b)edgeBetween(edges,a,b,"neuron-semantic");
+ });
+ areas.forEach(a=>{
+  const g=make("g",{class:"node topic-node",tabindex:"0",role:"button","aria-label":a.name});
+  g.dataset.id=a.id;
+  drawKnowledgeCluster(g,a);
+  g.onclick=()=>select(a.name);
+  g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select(a.name)}};
+  g.addEventListener("pointerenter",()=>{hoveredNode=a.id;highlightNeuronNetwork(a.id)});
+  g.addEventListener("pointerleave",()=>{if(hoveredNode===a.id)hoveredNode=null;highlightNeuronNetwork(selectedMapTopic)});
+  g.addEventListener("focus",()=>highlightNeuronNetwork(a.id));
+  g.addEventListener("blur",()=>highlightNeuronNetwork(selectedMapTopic));
+  nodes.append(g);motionNodes.set(a.id,g);
+  const b=document.createElement("button"),swatch=document.createElement("span");
+  b.className="area-menu-item";b.dataset.id=a.id;swatch.className="swatch";swatch.style.background=a.color;
+  b.append(swatch,document.createTextNode(a.name+" ("+a.count+")"));
+  b.onclick=()=>{show("map");select(a.name)};
+  menu.append(b);
+ });
+ if(selectedIndex!==-1){
+  const a=lookup.get(selectedMapTopic),items=mapObjectsForTopic(selectedMapTopic);
+  // Satellite placement is local to the topic and deterministic for stable navigation.
+  items.forEach((item,i)=>{
+   const ringIndex=Math.floor(i/8),ringSize=Math.min(8,items.length-ringIndex*8);
+   const localIndex=i%8,theta=-Math.PI/2+2*Math.PI*localIndex/Math.max(1,ringSize);
+   const distance=92+ringIndex*61,x=Math.max(62,Math.min(836,a.x+Math.cos(theta)*distance)),y=Math.max(58,Math.min(485,a.y+Math.sin(theta)*distance));
+   const satellite={id:item.id,x,y,r:21,kind:item.type};
+   areas.push(satellite);
+   edgeBetween(edges,a,satellite,"reveal-edge "+item.type+"-link");
+   const group=make("g",{class:"node map-satellite satellite-"+item.type,tabindex:"0",role:"button","aria-label":item.type+": "+item.title});
+   group.dataset.id=item.id;
+   group.append(make("circle",{class:"satellite-halo",cx:x,cy:y,r:29}));
+   group.append(make("rect",{class:"satellite-shape",x:x-23,y:y-23,width:46,height:46,rx:item.type==="publication"?23:12}));
+   const symbol=make("text",{class:"satellite-icon",x,y:y+6});
+   symbol.textContent={publication:"▤",project:"◈",experience:"◷"}[item.type];
+   group.append(symbol);
+   const words=item.title.length>28?item.title.slice(0,27)+"…":item.title;
+   const label=make("text",{class:"satellite-label",x,y:y+40});label.textContent=words;group.append(label);
+   group.onclick=item.open;
+   group.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();item.open()}};
+   nodes.append(group);motionNodes.set(item.id,group);
   });
  }
- startMotion()}
+ highlightNeuronNetwork(selectedMapTopic);
+ document.querySelectorAll(".area-menu-item,.topic-node").forEach(el=>el.classList.toggle("active",el.dataset.id===selectedMapTopic));
+ startMotion();
+}
+
 function renderPosts(){const list=$("#publication-list");list.replaceChildren();renderFilters();document.querySelector(".nav[data-view=posts] small").textContent=entries.length;
  const matches=activeTopic?entries.filter(n=>n.topics.includes(activeTopic)):entries;
  if(!matches.length){const empty=document.createElement("div");empty.className="empty";empty.textContent=activeTopic?"По выбранному направлению публикаций пока нет.":"Публичных записей пока нет.";list.append(empty)}
